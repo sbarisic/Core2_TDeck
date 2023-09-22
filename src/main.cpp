@@ -125,27 +125,27 @@ void draw_thread(void *args)
     vec3 rot_axis = {0, 0, 1};
     vec3 scal = {1.5f, 1.5f, 1};
 
-    fglClearBuffer(&ColorBuffer, 0);
-
-    trans[XElement] = 100;
-    trans[YElement] = 100;
-    glm_translate_make(fgl->MatModel, trans);
-    glm_rotate(fgl->MatModel, sinf(ms / 1000.0f), rot_axis);
-
-    for (size_t i = 0; i < TRI_COUNT; i++)
-        fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
-
-    trans[XElement] = 200;
-    trans[YElement] = 120;
-    glm_translate_make(fgl->MatModel, trans);
-    glm_rotate(fgl->MatModel, cosf(ms / 1000.0f) * 0.95f, rot_axis);
-    glm_scale(fgl->MatModel, scal);
-
-    for (size_t i = 0; i < TRI_COUNT; i++)
-        fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
-
     for (;;)
     {
+        fglClearBuffer(&ColorBuffer, 0);
+
+        trans[XElement] = 100;
+        trans[YElement] = 100;
+        glm_translate_make(fgl->MatModel, trans);
+        glm_rotate(fgl->MatModel, sinf(ms / 1000.0f), rot_axis);
+
+        for (size_t i = 0; i < TRI_COUNT; i++)
+            fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
+
+        trans[XElement] = 200;
+        trans[YElement] = 120;
+        glm_translate_make(fgl->MatModel, trans);
+        glm_rotate(fgl->MatModel, cosf(ms / 1000.0f) * 0.95f, rot_axis);
+        glm_scale(fgl->MatModel, scal);
+
+        for (size_t i = 0; i < TRI_COUNT; i++)
+            fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
+
         ms_now = millis();
         frame_time = ms_now - ms;
         ms = ms_now;
@@ -172,9 +172,6 @@ void core2_main()
     fgl_init(WIDTH, HEIGHT, 16);
 
     xTaskCreatePinnedToCore(draw_thread, "gpu_main", 1024 * 16, NULL, 1, NULL, 1);
-
-    while (ColorBuffer.Pixels == NULL)
-        vTaskDelay(pdMS_TO_TICKS(10));
 
     for (;;)
     {
