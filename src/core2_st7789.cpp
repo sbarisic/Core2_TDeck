@@ -26,7 +26,7 @@ void core2_st7789_backlight(uint8_t dc)
 	ledcWrite(0, dc);
 }
 
-void st7789_spi_init(gpio_num_t GPIO_SCLK, gpio_num_t GPIO_MOSI, gpio_num_t GPIO_CS, gpio_num_t GPIO_DC, gpio_num_t GPIO_BL)
+void st7789_spi_init(gpio_num_t GPIO_SCLK, gpio_num_t GPIO_MOSI, gpio_num_t GPIO_MISO, gpio_num_t GPIO_CS, gpio_num_t GPIO_DC, gpio_num_t GPIO_BL)
 {
 	ST7789_DC = GPIO_DC;
 
@@ -40,12 +40,12 @@ void st7789_spi_init(gpio_num_t GPIO_SCLK, gpio_num_t GPIO_MOSI, gpio_num_t GPIO
 
 	spi_bus_config_t buscfg = {
 		.mosi_io_num = GPIO_MOSI,
-		.miso_io_num = -1,
+		.miso_io_num = GPIO_MISO,
 		.sclk_io_num = GPIO_SCLK,
 		.quadwp_io_num = -1,
 		.quadhd_io_num = -1,
 		.max_transfer_sz = 0,
-		.flags = 0,
+		.flags = SPICOMMON_BUSFLAG_MASTER,
 	};
 
 	esp_err_t ret = spi_bus_initialize(HOST_ID, &buscfg, SPI_DMA_CH_AUTO);
@@ -64,6 +64,16 @@ void st7789_spi_init(gpio_num_t GPIO_SCLK, gpio_num_t GPIO_MOSI, gpio_num_t GPIO
 	assert(ret == ESP_OK);
 }
 
+void st7789_spi_begin()
+{
+	spi_device_acquire_bus(ST7789_Dev, portMAX_DELAY);
+}
+
+void st7789_spi_end()
+{
+	spi_device_release_bus(ST7789_Dev);
+}
+
 bool st7789_spi_write_byte(const uint8_t *Data, size_t DataLength)
 {
 	t = {0};
@@ -72,9 +82,21 @@ bool st7789_spi_write_byte(const uint8_t *Data, size_t DataLength)
 
 	esp_err_t ret = spi_device_transmit(ST7789_Dev, &t);
 	assert(ret == ESP_OK);
-
 	return true;
 }
+
+/*
+bool st7789_spi_queue_byte(const uint8_t *Data, size_t DataLength)
+{
+	t = {0};
+	t.length = DataLength * 8;
+	t.tx_buffer = Data;
+
+	esp_err_t ret = spi_device_queue_trans(ST7789_Dev, &t, portMAX_DELAY);
+	assert(ret == ESP_OK);
+	return true;
+}
+*/
 
 bool st7789_write_cmd(uint8_t *cmd, size_t len)
 {
@@ -105,7 +127,7 @@ bool st7789_write_dat_u16(uint16_t d)
 
 bool st7789_write_addr(uint16_t addr1, uint16_t addr2)
 {
-	static uint8_t Byte[4];
+	static WORD_ALIGNED_ATTR uint8_t Byte[4];
 
 	Byte[0] = (addr1 >> 8) & 0xFF;
 	Byte[1] = addr1 & 0xFF;
@@ -116,38 +138,11 @@ bool st7789_write_addr(uint16_t addr1, uint16_t addr2)
 	return st7789_spi_write_byte(Byte, 4);
 }
 
-bool st7789_write_color(uint16_t color, uint16_t size)
-{
-	static uint8_t Byte[1024];
-	int index = 0;
-	for (int i = 0; i < size; i++)
-	{
-		Byte[index++] = (color >> 8) & 0xFF;
-		Byte[index++] = color & 0xFF;
-	}
-
-	gpio_set_level(ST7789_DC, SPI_Data_Mode);
-	return st7789_spi_write_byte(Byte, size * 2);
-}
-
-bool st7789_write_colors(uint16_t *colors, uint16_t size)
-{
-	static uint8_t Byte[1024];
-	int index = 0;
-	for (int i = 0; i < size; i++)
-	{
-		Byte[index++] = (colors[i] >> 8) & 0xFF;
-		Byte[index++] = colors[i] & 0xFF;
-	}
-
-	gpio_set_level(ST7789_DC, SPI_Data_Mode);
-	return st7789_spi_write_byte(Byte, size * 2);
-}
-
 void core2_st7789_draw_fb(uint16_t *colors)
 {
 	const int lines_to_send = 6;
 
+	st7789_spi_begin();
 	st7789_write_cmd_u8(ST7789_CASET);
 	st7789_write_addr(0, WIDTH);
 	st7789_write_cmd_u8(ST7789_RASET);
@@ -158,16 +153,16 @@ void core2_st7789_draw_fb(uint16_t *colors)
 	for (size_t y = 0; y < HEIGHT / lines_to_send; y++)
 	{
 		st7789_spi_write_byte((uint8_t *)(colors + y * WIDTH * lines_to_send), lines_to_send * WIDTH * sizeof(uint16_t));
+		// st7789_spi_queue_byte((uint8_t *)(colors + y * WIDTH * lines_to_send), lines_to_send * WIDTH * sizeof(uint16_t));
 	}
+
+	// st7789_write_cmd_u8(ST7789_NOP);
+	st7789_spi_end();
 }
 
+/*
 void draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 {
-	/*if (x >= WIDTH)
-		return;
-	if (y >= HEIGHT)
-		return;*/
-
 	uint16_t _x = x + OFFSETX;
 	uint16_t _y = y + OFFSETY;
 
@@ -179,7 +174,7 @@ void draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 
 	st7789_write_cmd_u8(ST7789_RAMWR); //	Memory Write
 	st7789_write_dat_u16(color);
-}
+}*/
 
 void core2_st7789_init()
 {
@@ -189,7 +184,7 @@ void core2_st7789_init()
 	ledcAttachPin(BOARD_TFT_BACKLIGHT, 0);
 	core2_st7789_backlight(255);
 
-	st7789_spi_init((gpio_num_t)BOARD_SPI_SCK, (gpio_num_t)BOARD_SPI_MOSI, (gpio_num_t)BOARD_TFT_CS, (gpio_num_t)BOARD_TFT_DC, (gpio_num_t)BOARD_TFT_BACKLIGHT);
+	st7789_spi_init((gpio_num_t)BOARD_SPI_SCK, (gpio_num_t)BOARD_SPI_MOSI, (gpio_num_t)BOARD_SPI_MISO, (gpio_num_t)BOARD_TFT_CS, (gpio_num_t)BOARD_TFT_DC, (gpio_num_t)BOARD_TFT_BACKLIGHT);
 
 	st7789_write_cmd_u8(ST7789_SWRESET);
 	vTaskDelay(pdMS_TO_TICKS(ST7789_RST_DELAY));
@@ -197,33 +192,30 @@ void core2_st7789_init()
 	st7789_write_cmd_u8(ST7789_SLPOUT);
 	vTaskDelay(pdMS_TO_TICKS(ST7789_SLPOUT_DELAY));
 
-	st7789_write_cmd_u8(ST7789_COLMOD);
+	st7789_write_cmd_u8(ST7789_COLMOD); // Interface pixel format
 	st7789_write_dat_u8(0b01010101);
 
 	st7789_write_cmd_u8(ST7789_MADCTL); // Memory Data Access Control
 	st7789_write_dat_u8(0b00100000);
-	vTaskDelay(pdMS_TO_TICKS(10));
+	// vTaskDelay(pdMS_TO_TICKS(10));
 
 	st7789_write_cmd_u8(ST7789_CASET); // Column Address Set
-	st7789_write_dat_u8(0x00);
-	st7789_write_dat_u8(0x00);
-	st7789_write_dat_u8(0x00);
-	st7789_write_dat_u8(0xF0);
+	st7789_write_addr(0, WIDTH);
 
 	st7789_write_cmd_u8(ST7789_RASET); // Row Address Set
-	st7789_write_dat_u8(0x00);
-	st7789_write_dat_u8(0x00);
-	st7789_write_dat_u8(0x00);
-	st7789_write_dat_u8(0xF0);
+	st7789_write_addr(0, HEIGHT);
 
 	st7789_write_cmd_u8(ST7789_INVON); // Display Inversion On
-	vTaskDelay(pdMS_TO_TICKS(10));
+	// vTaskDelay(pdMS_TO_TICKS(10));
 
 	st7789_write_cmd_u8(ST7789_NORON); // Normal Display Mode On
-	vTaskDelay(pdMS_TO_TICKS(10));
+	// vTaskDelay(pdMS_TO_TICKS(10));
+
+	st7789_write_cmd_u8(ST7789_DGMEN);
+	st7789_write_dat_u8(0x00);
 
 	st7789_write_cmd_u8(ST7789_DISPON); // Display ON
-										// vTaskDelay(pdMS_TO_TICKS(255));
+	vTaskDelay(pdMS_TO_TICKS(ST7789_RST_DELAY));
 }
 
 void core2_st7789_test()

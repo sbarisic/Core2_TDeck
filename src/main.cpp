@@ -21,8 +21,8 @@
 int Width;
 int Height;
 
-FglBuffer ColorBuffer;
-FglBuffer TestTex;
+FglBuffer ColorBuffer = {0};
+FglBuffer TestTex = {0};
 
 #define TRI_COUNT 2
 FglTriangle3 Tri[TRI_COUNT];
@@ -110,16 +110,8 @@ void fgl_init(int W, int H, int BPP)
     glm_mat4_identity(fgl->MatProj);
 }
 
-void core2_main()
+void draw_thread(void *args)
 {
-    pinMode(BOARD_POWERON, OUTPUT);
-    digitalWrite(BOARD_POWERON, HIGH);
-    vTaskDelay(pdMS_TO_TICKS(100));
-
-    core2_st7789_init();
-
-    dprintf("core2_gpu_main BEGIN\n");
-    fgl_init(WIDTH, HEIGHT, 16);
     FglState *fgl = fglGetState();
 
     ulong ms = millis();
@@ -133,29 +125,27 @@ void core2_main()
     vec3 rot_axis = {0, 0, 1};
     vec3 scal = {1.5f, 1.5f, 1};
 
+    fglClearBuffer(&ColorBuffer, 0);
+
+    trans[XElement] = 100;
+    trans[YElement] = 100;
+    glm_translate_make(fgl->MatModel, trans);
+    glm_rotate(fgl->MatModel, sinf(ms / 1000.0f), rot_axis);
+
+    for (size_t i = 0; i < TRI_COUNT; i++)
+        fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
+
+    trans[XElement] = 200;
+    trans[YElement] = 120;
+    glm_translate_make(fgl->MatModel, trans);
+    glm_rotate(fgl->MatModel, cosf(ms / 1000.0f) * 0.95f, rot_axis);
+    glm_scale(fgl->MatModel, scal);
+
+    for (size_t i = 0; i < TRI_COUNT; i++)
+        fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
+
     for (;;)
     {
-        fglClearBuffer(&ColorBuffer, 0);
-
-        trans[XElement] = 100;
-        trans[YElement] = 100;
-        glm_translate_make(fgl->MatModel, trans);
-        glm_rotate(fgl->MatModel, sinf(ms / 1000.0f), rot_axis);
-
-        for (size_t i = 0; i < TRI_COUNT; i++)
-            fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
-
-        trans[XElement] = 200;
-        trans[YElement] = 120;
-        glm_translate_make(fgl->MatModel, trans);
-        glm_rotate(fgl->MatModel, cosf(ms / 1000.0f) * 0.95f, rot_axis);
-        glm_scale(fgl->MatModel, scal);
-
-        for (size_t i = 0; i < TRI_COUNT; i++)
-            fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
-
-        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels);
-
         ms_now = millis();
         frame_time = ms_now - ms;
         ms = ms_now;
@@ -165,7 +155,29 @@ void core2_main()
             dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
         }
 
+        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels);
         vTaskDelay(pdMS_TO_TICKS(2));
-        // vTaskDelay(1);
+    }
+}
+
+void core2_main()
+{
+    pinMode(BOARD_POWERON, OUTPUT);
+    digitalWrite(BOARD_POWERON, HIGH);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    core2_st7789_init();
+
+    dprintf("core2_gpu_main BEGIN\n");
+    fgl_init(WIDTH, HEIGHT, 16);
+
+    xTaskCreatePinnedToCore(draw_thread, "gpu_main", 1024 * 16, NULL, 1, NULL, 1);
+
+    while (ColorBuffer.Pixels == NULL)
+        vTaskDelay(pdMS_TO_TICKS(10));
+
+    for (;;)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
