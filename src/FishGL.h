@@ -1,7 +1,8 @@
 #pragma once
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <FishGLConfig.h>
@@ -14,154 +15,159 @@ extern "C" {
 #define FGL_DISCARD true
 #define FGL_KEEP false
 
-#define COPY_VEC2(dst, src) do { dst[XElement] = src[XElement]; dst[YElement] = src[YElement]; } while(0)
+#define COPY_VEC2(dst, src)            \
+	do                                 \
+	{                                  \
+		dst[XElement] = src[XElement]; \
+		dst[YElement] = src[YElement]; \
+	} while (0)
 
-typedef enum {
-	PixelOrder_Unknown,
-	PixelOrder_RGBA,
-	PixelOrder_ABGR
-} PixelOrder;
+	typedef enum
+	{
+		PixelOrder_Unknown,
+		PixelOrder_RGBA,
+		PixelOrder_ABGR
+	} PixelOrder;
 
-/*
-typedef struct {
-	union {
-		vec2 V2;
-		vec3 V3;
-	};
-} vec23;*/
+	// 16 bit 565 RGB
+	/*typedef union __attribute__((packed))
+	{
+		struct __attribute__((packed))
+		{
+			uint8_t R : 5;
+			uint8_t G : 6;
+			uint8_t B : 5;
+		};
 
-/*typedef struct {
-	//union {
-		//struct {
-			uint8_t R, G, B;
-		//};
-		//int32_t Int;
-		//uint32_t UInt;
-	//};
-} FglColor;*/
+		uint16_t u16;
+	} FglColor;*/
 
-// 16 bit 565 RGB
-typedef uint16_t FglColor;
+	/*typedef struct __attribute__((packed))
+	{
+		uint16_t u16;
+	} FglColor;*/
 
-typedef struct {
-	union {
-		void* Memory;
-		FglColor* Pixels;
-	};
+	// 16 bit 565 RGB
+	 typedef uint16_t FglColor;
 
-	int32_t Width;
-	int32_t Height;
+	typedef struct
+	{
+		union
+		{
+			void *Memory;
+			FglColor *Pixels;
+		};
 
-	int32_t Length;
-	int32_t PixelCount;
-} FglBuffer;
+		int32_t Width;
+		int32_t Height;
 
-typedef struct {
-	vec3 A, B, C;
-} FglTriangle3;
+		int32_t Length;
+		int32_t PixelCount;
+	} FglBuffer;
 
-typedef struct {
-	vec2 A, B, C;
-} FglTriangle2;
+	typedef struct
+	{
+		vec3 A, B, C;
+	} FglTriangle3;
 
-typedef enum {
-	FglTextureWrap_Clamp,
-	FglTextureWrap_BorderColor,
-	//FglTextureWrap_Repeat,
-} FglTextureWrap;
+	typedef struct
+	{
+		vec2 A, B, C;
+	} FglTriangle2;
 
-typedef enum {
-	FglBlendMode_None
-} FglBlendMode;
+	typedef enum
+	{
+		FglTextureWrap_Clamp,
+		FglTextureWrap_BorderColor,
+		// FglTextureWrap_Repeat,
+	} FglTextureWrap;
 
-typedef enum {
-	FglShaderType_Vertex,
-	FglShaderType_Fragment,
-} FglShaderType;
+	typedef enum
+	{
+		FglBlendMode_None
+	} FglBlendMode;
 
-// These are not vec3 and vec2 because of padding
-typedef union {
-	float Vec3[3];
-	float Vec2[2];
-} FglVarying;
+	typedef enum
+	{
+		FglShaderType_Vertex,
+		FglShaderType_Fragment,
+	} FglShaderType;
 
-typedef union {
-	mat3 Mat;
+	// These are not vec3 and vec2 because of padding
+	typedef union
+	{
+		float Vec3[3];
+		float Vec2[2];
+	} FglVarying;
 
-	struct {
-		FglVarying A;
-		FglVarying B;
-		FglVarying C;
-	};
-} FglVaryingIn;
+	typedef union
+	{
+		mat3 Mat;
 
-typedef struct {
-	void* VideoMemory;
-	int32_t Width;
-	int32_t Height;
-	int32_t BPP;
-	int32_t Stride;
-	PixelOrder Order;
+		struct
+		{
+			FglVarying A;
+			FglVarying B;
+			FglVarying C;
+		};
+	} FglVaryingIn;
 
-	mat4 MatProj;
-	mat4 MatView;
+	typedef struct
+	{
+		void *VideoMemory;
+		int32_t Width;
+		int32_t Height;
+		int32_t BPP;
+		int32_t Stride;
+		PixelOrder Order;
+
+		mat4 MatProj;
+		mat4 MatView;
 		mat4 MatModel;
 
-	FglBlendMode BlendMode;
-	FglTextureWrap TextureWrap;
+		FglBlendMode BlendMode;
+		FglTextureWrap TextureWrap;
 
-	FglColor BorderColor;
-	FglBuffer Textures[FGL_MAX_TEXTURES];
+		FglColor BorderColor;
+		FglBuffer Textures[FGL_MAX_TEXTURES];
 
-	FglVaryingIn VarIn[FGL_VARYING_COUNT];
-	FglVarying VarOut[FGL_VARYING_COUNT];
+		FglVaryingIn VarIn[FGL_VARYING_COUNT];
+		FglVarying VarOut[FGL_VARYING_COUNT];
 
-	int32_t VertNum;
-	FglShaderType CurShader;
+		int32_t VertNum;
+		FglShaderType CurShader;
 
-	void* VertexShader;
-	void* FragmentShader;
-} FglState;
+		void *VertexShader;
+		void *FragmentShader;
+	} FglState;
 
-#ifdef FGL_INTERNAL
-FGL_API FglState RenderState;
-#endif
+	typedef bool (*FglVertexFunc)(FglState *State, vec3 Vert);
+	typedef bool (*FglFragmentFunc)(FglState *State, vec2 UV, FglColor *OutColor);
 
-typedef bool(*FglVertexFunc)(FglState* State, vec3 Vert);
-typedef bool(*FglFragmentFunc)(FglState* State, vec2 UV, FglColor* OutColor);
+	// Basics
+	FglColor fglColor(uint8_t r, uint8_t g, uint8_t b);
+	void fglColorToRGB(FglColor clr, uint8_t *r, uint8_t *g, uint8_t *b);
 
-// Basics
-FglColor fglColor(uint8_t r, uint8_t g, uint8_t b);
-void fglColorToRGB(FglColor clr, uint8_t *r, uint8_t *g, uint8_t *b);
+	// Initialization and state
+	FGL_API FGL_INLINE void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order);
+	FGL_API FGL_INLINE FglState *fglGetState();
+	FGL_API FGL_INLINE void fglSetState(FglState *State);
 
-// Initialization and state
-FGL_API FGL_INLINE void fglInit(void* VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order);
-FGL_API FGL_INLINE FglState* fglGetState();
-FGL_API FGL_INLINE void fglSetState(FglState* State);
+	// Shaders
+	FGL_API FGL_INLINE void fglBindShader(void *Shader, FglShaderType ShaderType);
 
-// Shaders
-FGL_API FGL_INLINE void fglBindShader(void* Shader, FglShaderType ShaderType);
+	// Buffer functions and textures
+	FGL_API FGL_INLINE FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height);
+	FGL_API FGL_INLINE FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len);
+	FGL_API FGL_INLINE void fglDisplayToFramebuffer(FglBuffer *Buffer);
+	FGL_API FGL_INLINE void fglClearBuffer(FglBuffer *Buffer, FglColor Clr);
+	FGL_API FGL_INLINE void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot);
 
-// Buffer functions and textures
-FGL_API FGL_INLINE FglBuffer fglCreateBuffer(void* Memory, int32_t Width, int32_t Height);
-FGL_API FGL_INLINE FglBuffer fglCreateBufferFromPng(void* PngInMemory, int32_t Len);
-FGL_API FGL_INLINE void fglDisplayToFramebuffer(FglBuffer* Buffer);
-FGL_API FGL_INLINE void fglClearBuffer(FglBuffer* Buffer, FglColor Clr);
-FGL_API FGL_INLINE void fglBindTexture(FglBuffer* TextureBuffer, int32_t Slot);
-
-// Drawing
-FGL_API FGL_INLINE void fglDrawLine(FglBuffer* Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1);
-FGL_API FGL_INLINE void fglDrawTriangle3(FglBuffer* Buffer, FglColor Color, FglTriangle3* Tri);
-FGL_API FGL_INLINE void fglFillTriangle3(FglBuffer* Buffer, FglColor Color, FglTriangle3* Tri);
-FGL_API FGL_INLINE void fglRenderTriangle3(FglBuffer* Buffer, FglTriangle3* Tri, FglTriangle2* UV);
-
-// Util functions, do not export these
-#ifdef FGL_INTERNAL
-FGL_INLINE void fglBoundingBox(FglTriangle3* Tri, vec3 Min, vec3 Max);
-FGL_INLINE void fglBoundingRect(FglTriangle3* Tri, vec2 Min, vec2 Max);
-FGL_INLINE bool fglBarycentric(FglTriangle3* Tri, int32_t X, int32_t Y, vec3 Val);
-FGL_INLINE void fglBlend(FglColor Src, FglColor* Dst);
-#endif
+	// Drawing
+	FGL_API FGL_INLINE void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1);
+	FGL_API FGL_INLINE void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
+	FGL_API FGL_INLINE void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
+	FGL_API FGL_INLINE void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
 
 #ifdef __cplusplus
 }

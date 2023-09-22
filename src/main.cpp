@@ -127,7 +127,7 @@ void draw_thread(void *args)
 
     for (;;)
     {
-        fglClearBuffer(&ColorBuffer, 0);
+        fglClearBuffer(&ColorBuffer, fglColor(0, 0, 0));
 
         trans[XElement] = 100;
         trans[YElement] = 100;
