@@ -29,18 +29,24 @@ extern "C"
 		PixelOrder_ABGR
 	} PixelOrder;
 
-	// 16 bit 565 RGB
-	/*typedef union __attribute__((packed))
+	// 16 bit 565 RGB, HI and LO bytes are swapped
+	typedef union
 	{
-		struct __attribute__((packed))
+		struct
 		{
-			uint8_t R : 5;
-			uint8_t G : 6;
-			uint8_t B : 5;
-		};
+			unsigned int R : 5;
+			unsigned int G : 6;
+			unsigned int B : 5;
+		} __attribute__((packed));
 
-		uint16_t u16;
-	} FglColor;*/
+		struct
+		{
+			unsigned int u8_LO : 8;
+			unsigned int u8_HI : 8;
+		} __attribute__((packed));
+
+		unsigned short u16;
+	} __attribute__((packed)) FglColor;
 
 	/*typedef struct __attribute__((packed))
 	{
@@ -48,7 +54,7 @@ extern "C"
 	} FglColor;*/
 
 	// 16 bit 565 RGB
-	 typedef uint16_t FglColor;
+	// typedef uint16_t FglColor;
 
 	typedef struct
 	{

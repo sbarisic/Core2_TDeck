@@ -2,38 +2,31 @@
 #include <FishGL.h>
 #include <FishGLShader.h>
 
+#include <byteswap.h>
+
 #define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
 #define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
 
-FGL_INLINE void fglBoundingBox(FglTriangle3* Tri, vec3 Min, vec3 Max);
-FGL_INLINE void fglBoundingRect(FglTriangle3* Tri, vec2 Min, vec2 Max);
-FGL_INLINE bool fglBarycentric(FglTriangle3* Tri, int32_t X, int32_t Y, vec3 Val);
-FGL_INLINE void fglBlend(FglColor Src, FglColor* Dst);
+FGL_INLINE void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max);
+FGL_INLINE void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max);
+FGL_INLINE bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val);
+FGL_INLINE void fglBlend(FglColor Src, FglColor *Dst);
 
 FGL_API FglState RenderState;
 
 FglColor fglColor(uint8_t r, uint8_t g, uint8_t b)
 {
-	uint16_t r16 = (r & 0b11111000) >> 3;
-	uint16_t g16 = (g & 0b11111100) >> 2;
-	uint16_t b16 = (b & 0b11111000) >> 3;
-
-	FglColor clr;
-	clr.u16 = (b16 << (6 + 5)) | (g16 << 5) | (r16);
-
+	FglColor clr = {.R = r >> 3, .G = g >> 2, .B = b >> 3};
+	clr.u16 = __bswap16(clr.u16);
 	return clr;
-
-	//FglColor clr = (b16 << (6 + 5)) | (g16 << 5) | (r16);
-	//return ((clr.u16 >> 8) & 0xFF) | ((clr.u16 & 0xFF) << 8);
 }
 
 void fglColorToRGB(FglColor clr, uint8_t *r, uint8_t *g, uint8_t *b)
 {
-	uint16_t clrsw = ((clr.u16 >> 8) & 0xFF) | ((clr.u16 & 0xFF) << 8);
-
-	*r = (clrsw & 0b11111) << 3;
-	*g = ((clrsw >> 5) & 0b111111) << 2;
-	*b = ((clrsw >> (5 + 6)) & 0b11111) << 3;
+	clr.u16 = __bswap16(clr.u16);
+	*r = clr.R << 3;
+	*g = clr.G << 2;
+	*b = clr.B << 3;
 }
 
 FGL_INLINE void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order)
