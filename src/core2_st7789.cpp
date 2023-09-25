@@ -83,6 +83,9 @@ bool st7789_spi_write_byte(const uint8_t *Data, size_t DataLength)
 	esp_err_t ret = spi_device_transmit(ST7789_Dev, &t);
 	assert(ret == ESP_OK);
 	return true;
+
+	// TODO: Research this
+	//spi_device_queue_trans(ST7789_Dev, &t, portMAX_DELAY);
 }
 
 /*
@@ -136,6 +139,42 @@ bool st7789_write_addr(uint16_t addr1, uint16_t addr2)
 
 	gpio_set_level(ST7789_DC, SPI_Data_Mode);
 	return st7789_spi_write_byte(Byte, 4);
+}
+
+extern "C" void core2_st7789_draw_fb_pixel(uint16_t color, int x, int y)
+{
+	const int lines_to_send = 1;
+
+	st7789_spi_begin();
+	st7789_write_cmd_u8(ST7789_CASET);
+	st7789_write_addr(x, x);
+	st7789_write_cmd_u8(ST7789_RASET);
+	st7789_write_addr(y, y);
+	st7789_write_cmd_u8(ST7789_RAMWR);
+	gpio_set_level(ST7789_DC, SPI_Data_Mode);
+
+	st7789_spi_write_byte((uint8_t *)&color, 1 * sizeof(uint16_t));
+
+	// st7789_write_cmd_u8(ST7789_NOP);
+	st7789_spi_end();
+}
+
+extern "C" void core2_st7789_draw_fb_scanline(uint16_t *colors, int y)
+{
+	const int lines_to_send = 1;
+
+	st7789_spi_begin();
+	st7789_write_cmd_u8(ST7789_CASET);
+	st7789_write_addr(0, WIDTH);
+	st7789_write_cmd_u8(ST7789_RASET);
+	st7789_write_addr(y, y);
+	st7789_write_cmd_u8(ST7789_RAMWR);
+	gpio_set_level(ST7789_DC, SPI_Data_Mode);
+
+	st7789_spi_write_byte((uint8_t *)colors, lines_to_send * WIDTH * sizeof(uint16_t));
+
+	// st7789_write_cmd_u8(ST7789_NOP);
+	st7789_spi_end();
 }
 
 void core2_st7789_draw_fb(uint16_t *colors)

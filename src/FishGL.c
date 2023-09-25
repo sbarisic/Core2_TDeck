@@ -6,12 +6,20 @@
 #include <esp_dsp.h>
 #include <byteswap.h>
 
+// Core2
+void core2_st7789_draw_fb_scanline(FglColor *colors, int y);
+void core2_st7789_draw_fb_pixel(uint16_t color, int x, int y);
+
+// MATH ===================================================================================================================================
+// RENDERER ===============================================================================================================================
+
 #define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
 #define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
 
 FGL_API FglState RenderState;
+FglColor *Scanline;
 
-void fglBoundingBox(FglTriangle3 *Tri, fglVec3 *Min, fglVec3 *Max)
+static void _fglBoundingBox(FglTriangle3 *Tri, fglVec3 *Min, fglVec3 *Max)
 {
 	Min->X = fgl_fminf(fgl_fminf(Tri->A.X, Tri->B.X), Tri->C.X);
 	Min->Y = fgl_fminf(fgl_fminf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
@@ -22,7 +30,7 @@ void fglBoundingBox(FglTriangle3 *Tri, fglVec3 *Min, fglVec3 *Max)
 	Max->Z = fgl_fmaxf(fgl_fmaxf(Tri->A.Z, Tri->B.Z), Tri->C.Z);
 }
 
-void fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max)
+static void _fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max)
 {
 	Min->X = fgl_fminf(fgl_fminf(Tri->A.X, Tri->B.X), Tri->C.X);
 	Min->Y = fgl_fminf(fgl_fminf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
@@ -31,7 +39,7 @@ void fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max)
 	Max->Y = fgl_fmaxf(fgl_fmaxf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
 }
 
-void fglBoundingRect2(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 *Min, fglVec2 *Max)
+static void _fglBoundingRect2(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 *Min, fglVec2 *Max)
 {
 	Min->X = fgl_fminf(fgl_fminf(A.X, B.X), C.X);
 	Min->Y = fgl_fminf(fgl_fminf(A.Y, B.Y), C.Y);
@@ -40,20 +48,25 @@ void fglBoundingRect2(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 *Min, fglVec2 *Ma
 	Max->Y = fgl_fmaxf(fgl_fmaxf(A.Y, B.Y), C.Y);
 }
 
-bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, fglVec3 *Val)
+static bool _fglBarycentric(fglVec3 A, fglVec3 B, fglVec3 C, float X, float Y, fglVec3 *Val)
 {
+	// fglVec3 A = Tri->A;
+	// fglVec3 B = Tri->B;
+	// fglVec3 C = Tri->C;
 
 	fglVec3 U;
 	fglVec3 a;
 	fglVec3 b;
 
-	a.X = (Tri->C.X) - (Tri->A.X);
-	a.Y = (Tri->B.X) - (Tri->A.X);
-	a.Z = (Tri->A.X) - (float)X;
+	a.X = (C.X) - (A.X);
+	a.Y = (B.X) - (A.X);
+	a.Z = (A.X) - (float)X;
+	// a = fgl_Vec3(C.X - A.X, B.X - A.X, A.X - X);
 
-	b.X = (Tri->C.Y) - (Tri->A.Y);
-	b.Y = (Tri->B.Y) - (Tri->A.Y);
-	b.Z = (Tri->A.Y) - (float)Y;
+	b.X = (C.Y) - (A.Y);
+	b.Y = (B.Y) - (A.Y);
+	b.Z = (A.Y) - (float)Y;
+	// b = fgl_Vec3(C.Y - A.Y, B.Y - A.Y, A.Y - Y);
 
 	// glm_vec_cross((float *)&a, (float *)&b, (float *)&U);
 	U = fgl_Cross3(a, b);
@@ -71,7 +84,7 @@ bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, fglVec3 *Val)
 	return true;
 }
 
-void fglBlend(FglColor Src, FglColor *Dst)
+static void _fglBlend(FglColor Src, FglColor *Dst)
 {
 	if (RenderState.BlendMode == FglBlendMode_None)
 		*Dst = Src;
@@ -100,6 +113,8 @@ void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int3
 	fgl_Identity_4x4(&RenderState.MatModel);
 	fgl_Identity_4x4(&RenderState.MatView);
 	fgl_Identity_4x4(&RenderState.MatProj);
+
+	Scanline = (FglColor *)malloc(Width * sizeof(FglColor));
 }
 
 FglState *fglGetState()
@@ -244,29 +259,7 @@ void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int3
 	}
 }
 
-/*
-void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
-{
-	 fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement]);
-	 fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
-	 fglDrawLine(Buffer, Color, (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
-}*/
-
-void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
-{
-	fglVec2 Min, Max;
-	fglVec3 V;
-	fglBoundingRect(Tri, &Min, &Max);
-
-	for (size_t y = (size_t)Min.Y; y < Max.Y; y++)
-		for (size_t x = (size_t)Min.X; x < Max.X; x++)
-		{
-			if (fglBarycentric(Tri, x, y, &V))
-				Buffer->Pixels[y * Buffer->Width + x] = Color;
-		}
-}
-
-fglMat3 createVaryingMat(fglVec3 A, fglVec3 B, fglVec3 C)
+static fglMat3 _createVaryingMat(fglVec3 A, fglVec3 B, fglVec3 C)
 {
 	fglMat3 Mat;
 
@@ -285,52 +278,120 @@ fglMat3 createVaryingMat(fglVec3 A, fglVec3 B, fglVec3 C)
 	return Mat;
 }
 
-void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle2 *UVsIn)
+static void _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 UVA, fglVec2 UVB, fglVec2 UVC)
 {
-	if (RenderState.FragmentShader == NULL)
+	if (RenderState.VertexShader == NULL || RenderState.FragmentShader == NULL)
 		return;
 
-	fglMat3 Mat = createVaryingMat(fgl_Vec3_from_Vec2(UVsIn->A, 0), fgl_Vec3_from_Vec2(UVsIn->B, 0), fgl_Vec3_from_Vec2(UVsIn->C, 0));
-	FglTriangle3 Tri = *TriangleIn;
+	const fglMat3 Mat = _createVaryingMat(fgl_Vec3_from_Vec2(UVA, 0), fgl_Vec3_from_Vec2(UVB, 0), fgl_Vec3_from_Vec2(UVC, 0));
+	FglVertexFunc VertShader = (FglVertexFunc)RenderState.VertexShader;
+	RenderState.CurShader = FglShaderType_Vertex;
 
-	if (RenderState.VertexShader != NULL)
-	{
-		FglVertexFunc VertShader = (FglVertexFunc)RenderState.VertexShader;
-		RenderState.CurShader = FglShaderType_Vertex;
+	RenderState.VertNum = 0;
+	if (VertShader(&RenderState, &A) == FGL_DISCARD)
+		return;
 
-		RenderState.VertNum = 0;
-		if (VertShader(&RenderState, &Tri.A) == FGL_DISCARD)
-			return;
+	RenderState.VertNum = 1;
+	if (VertShader(&RenderState, &B) == FGL_DISCARD)
+		return;
 
-		RenderState.VertNum = 1;
-		if (VertShader(&RenderState, &Tri.B) == FGL_DISCARD)
-			return;
-
-		RenderState.VertNum = 2;
-		if (VertShader(&RenderState, &Tri.C) == FGL_DISCARD)
-			return;
-	}
+	RenderState.VertNum = 2;
+	if (VertShader(&RenderState, &C) == FGL_DISCARD)
+		return;
 
 	fglVec2 Min, Max;
 	fglVec3 UV;
 	FglColor OutClr;
-	fglBoundingRect2(Tri.A, Tri.B, Tri.C, &Min, &Max);
+	_fglBoundingRect2(A, B, C, &Min, &Max);
 
 	FglFragmentFunc FragShader = (FglFragmentFunc)RenderState.FragmentShader;
 	RenderState.CurShader = FglShaderType_Fragment;
 
+	// ------
 	for (size_t y = (size_t)Min.Y; y < Max.Y; y++)
+	{
 		for (size_t x = (size_t)Min.X; x < Max.X; x++)
 		{
 			fglVec3 Barycentric;
-			if (fglBarycentric(&Tri, x, y, &Barycentric))
+			if (_fglBarycentric(A, B, C, x, y, &Barycentric))
 			{
-				fgl_Mul_3x3_3x1(&Mat, Barycentric, &UV);
+				dspm_mult_3x3x1_f32_ae32((const float *)&Mat, (const float *)&Barycentric, (float *)&UV); // fgl_Mul_3x3_3x1
 
-				if (FragShader(&RenderState, *(fglVec2 *)&UV, &OutClr) == FGL_DISCARD)
+				if (FragShader(&RenderState, *(fglVec2 *)&UV, &Buffer->Pixels[y * Buffer->Width + x]) == FGL_DISCARD)
 					continue;
 
-				fglBlend(OutClr, &Buffer->Pixels[y * Buffer->Width + x]);
+				//_fglBlend(OutClr, &Buffer->Pixels[y * Buffer->Width + x]);
 			}
 		}
+	}
 }
+
+static void _fglRenderTriangleDirect(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 UVA, fglVec2 UVB, fglVec2 UVC)
+{
+	if (RenderState.VertexShader == NULL || RenderState.FragmentShader == NULL)
+		return;
+
+	const fglMat3 Mat = _createVaryingMat(fgl_Vec3_from_Vec2(UVA, 0), fgl_Vec3_from_Vec2(UVB, 0), fgl_Vec3_from_Vec2(UVC, 0));
+	FglVertexFunc VertShader = (FglVertexFunc)RenderState.VertexShader;
+	RenderState.CurShader = FglShaderType_Vertex;
+
+	RenderState.VertNum = 0;
+	if (VertShader(&RenderState, &A) == FGL_DISCARD)
+		return;
+
+	RenderState.VertNum = 1;
+	if (VertShader(&RenderState, &B) == FGL_DISCARD)
+		return;
+
+	RenderState.VertNum = 2;
+	if (VertShader(&RenderState, &C) == FGL_DISCARD)
+		return;
+
+	fglVec2 Min, Max;
+	fglVec3 UV;
+	FglColor OutClr;
+	_fglBoundingRect2(A, B, C, &Min, &Max);
+
+	FglFragmentFunc FragShader = (FglFragmentFunc)RenderState.FragmentShader;
+	RenderState.CurShader = FglShaderType_Fragment;
+
+	// ------
+	for (size_t y = (size_t)Min.Y; y < Max.Y; y++)
+	{
+		for (size_t x = (size_t)Min.X; x < Max.X; x++)
+		{
+			fglVec3 Barycentric;
+			if (_fglBarycentric(A, B, C, x, y, &Barycentric))
+			{
+				dspm_mult_3x3x1_f32_ae32((const float *)&Mat, (const float *)&Barycentric, (float *)&UV); // fgl_Mul_3x3_3x1
+
+				/*if (FragShader(&RenderState, *(fglVec2 *)&UV, &Buffer->Pixels[y * Buffer->Width + x]) == FGL_DISCARD)
+					continue;*/
+
+				FglColor clr;
+				if (FragShader(&RenderState, *(fglVec2 *)&UV, &clr) == FGL_DISCARD)
+					continue;
+
+				core2_st7789_draw_fb_pixel(clr.u16, x, y);
+
+				//_fglBlend(OutClr, &Buffer->Pixels[y * Buffer->Width + x]);
+			}
+		}
+
+		// core2_st7789_draw_fb_scanline(Scanline, y);
+	}
+}
+
+/*void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle2 *UVsIn)
+{
+	_fglRenderTriangle(Buffer, TriangleIn->A, TriangleIn->B, TriangleIn->C, UVsIn->A, UVsIn->B, UVsIn->C);
+}
+//*/
+
+//*
+void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len)
+{
+	for (size_t i = 0; i < len; i += 3)
+		_fglRenderTriangle(Buffer, vecs[i + 0], vecs[i + 1], vecs[i + 2], uvs[i + 0], uvs[i + 1], uvs[i + 2]);
+}
+//*/

@@ -24,9 +24,13 @@ int Height;
 FglBuffer ColorBuffer = {0};
 FglBuffer TestTex = {0};
 
-#define TRI_COUNT 2
-FglTriangle3 Tri[TRI_COUNT];
-FglTriangle2 UV[TRI_COUNT];
+// #define TRI_COUNT 2
+// FglTriangle3 Tri[TRI_COUNT];
+// FglTriangle2 UV[TRI_COUNT];
+
+size_t vert_count;
+fglVec3 *verts;
+fglVec2 *uvs;
 
 bool VertexShader(FglState *State, fglVec3 *Vert)
 {
@@ -45,9 +49,10 @@ bool VertexShader(FglState *State, fglVec3 *Vert)
 
 bool FragmentShader(FglState *State, fglVec2 UV, FglColor *OutColor)
 {
-    FglColor C = fglShaderSampleTextureUV(&State->Textures[0], UV);
+    /*if (UV.X < 0 || UV.Y < 0 || UV.X > 1 || UV.Y > 1)
+        return FGL_DISCARD;*/
 
-    *OutColor = C;
+    *OutColor = fglShaderSampleTextureUV(&State->Textures[0], UV);
     return FGL_KEEP;
 }
 
@@ -88,11 +93,29 @@ void fgl_init(int W, int H, int BPP)
     float SX = 100;
     float SY = 100;
 
-    Tri[0] = (FglTriangle3){{X, Y, 0}, {X + SX, Y, 0}, {X, Y + SY, 0}};
+    vert_count = 6;
+    verts = (fglVec3 *)malloc(vert_count * sizeof(fglVec3));
+    uvs = (fglVec2 *)malloc(vert_count * sizeof(fglVec2));
+
+    verts[0] = fgl_Vec3(X, Y, 0);
+    verts[1] = fgl_Vec3(X + SX, Y, 0);
+    verts[2] = fgl_Vec3(X, Y + SY, 0);
+    verts[3] = fgl_Vec3(X + SX, Y, 0);
+    verts[4] = fgl_Vec3(X + SX, Y + SY, 0);
+    verts[5] = fgl_Vec3(X, Y + SY, 0);
+
+    uvs[0] = fgl_Vec2(0.0f, 0.0f);
+    uvs[1] = fgl_Vec2(1.0f, 0.0f);
+    uvs[2] = fgl_Vec2(0.0f, 1.0f);
+    uvs[3] = fgl_Vec2(1.0f, 0.0f);
+    uvs[4] = fgl_Vec2(1.0f, 1.0f);
+    uvs[5] = fgl_Vec2(0.0f, 1.0f);
+
+    /*Tri[0] = (FglTriangle3){{X, Y, 0}, {X + SX, Y, 0}, {X, Y + SY, 0}};
     UV[0] = (FglTriangle2){{0.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, 1.0f}};
 
     Tri[1] = (FglTriangle3){{X + SX, Y, 0}, {X + SX, Y + SY, 0}, {X, Y + SY, 0}};
-    UV[1] = (FglTriangle2){{1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};
+    UV[1] = (FglTriangle2){{1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};*/
 }
 
 void draw_thread(void *args)
@@ -107,33 +130,32 @@ void draw_thread(void *args)
 
     float xoffset = 0;
 
-    // vec3 trans = {100, 100, 0};
-    // vec3 rot_axis = {0, 0, 1};
-    // vec3 scal = {1.5f, 1.5f, 1};
+    fglMat4 pos1 = fgl_Make_Translate_4x4(fgl_Vec3(100, 100, 0));
+    fglMat4 pos2 = fgl_Make_Translate_4x4(fgl_Vec3(200, 120, 0));
+    fglVec3 unitZ = fgl_Vec3(0, 0, 1);
+    fglVec3 scaleVec = fgl_Vec3(1.5f, 1.5f, 1.0f);
 
     for (;;)
     {
         fglClearBuffer(&ColorBuffer, fglColor(0, 0, 0));
 
-        fgl->MatModel = fgl_Make_Translate_4x4(fgl_Vec3(100, 100, 0));
-        fgl->MatModel = fgl_Rotate(fgl->MatModel, sinf(rot_ms / 1000.0f), fgl_Vec3(0, 0, 1));
+        fgl->MatModel = pos1;
+        fgl_Rotate(&fgl->MatModel, sinf(rot_ms / 1000.0f), unitZ);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        for (size_t i = 0; i < TRI_COUNT; i++)
-            fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count);
 
-        fgl->MatModel = fgl_Make_Translate_4x4(fgl_Vec3(200, 120, 0));
-        fgl->MatModel = fgl_Rotate(fgl->MatModel, cosf(rot_ms / 1000.0f) * 0.95f, fgl_Vec3(0, 0, 1));
-        fgl->MatModel = fgl_Scale(fgl->MatModel, fgl_Vec3(1.5f, 1.5f, 1.0f));
+        fgl->MatModel = pos2;
+        fgl_Rotate(&fgl->MatModel, cosf(rot_ms / 1000.0f) * 0.95f, unitZ);
+        fgl_Scale(&fgl->MatModel, scaleVec);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        for (size_t i = 0; i < TRI_COUNT; i++)
-            fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count);
 
         ms_now = millis();
         frame_time = ms_now - ms;
         ms = ms_now;
-        // rot_ms = ms;
+        rot_ms = ms;
 
         if ((frame_counter++) % 10 == 0)
         {
@@ -156,7 +178,9 @@ void core2_main()
     dprintf("core2_gpu_main BEGIN\n");
     fgl_init(WIDTH, HEIGHT, 16);
 
-    xTaskCreatePinnedToCore(draw_thread, "gpu_main", 1024 * 16, NULL, 1, NULL, 1);
+    int PRIOR = 10;
+    int CORE = 1;
+    xTaskCreatePinnedToCore(draw_thread, "gpu_main", 1024 * 32, NULL, PRIOR, NULL, CORE);
 
     for (;;)
     {

@@ -11,6 +11,14 @@
         "stdint.h": "c",
         "random": "c",
         "fishglconfig.h": "c",
-        "fishgl.h": "c"
+        "fishgl.h": "c",
+        "esp_dsp.h": "c",
+        "dspi_dotprod.h": "c",
+        "dsps_math.h": "c",
+        "dsps_addc.h": "c",
+        "dsps_add.h": "c",
+        "dsps_mul.h": "c",
+        "dsps_sub.h": "c",
+        "core2_st7789.h": "c"
     }
 }

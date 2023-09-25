@@ -3,6 +3,14 @@
 #include <esp_dsp.h>
 #include <cglm/cglm.h>
 
+fglVec2 fgl_Vec2(float X, float Y)
+{
+	fglVec2 v;
+	v.X = X;
+	v.Y = Y;
+	return v;
+}
+
 fglVec3 fgl_Vec3(float X, float Y, float Z)
 {
 	fglVec3 v;
@@ -14,7 +22,11 @@ fglVec3 fgl_Vec3(float X, float Y, float Z)
 
 fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z)
 {
-	return fgl_Vec3(V2.X, V2.Y, Z);
+	fglVec3 v;
+	v.X = V2.X;
+	v.Y = V2.Y;
+	v.Z = Z;
+	return v;
 }
 
 void fgl_Mul_4x4_4x1(fglMat4 *mat, const fglVec4 vec, fglVec4 *res)
@@ -59,29 +71,32 @@ fglMat4 fgl_Make_Translate_4x4(fglVec3 tran)
 	return transMat;
 }
 
-fglMat4 fgl_Translate(fglMat4 mat, fglVec3 tran)
+void fgl_Translate(fglMat4 *mat, fglVec3 tran)
 {
-	glm_translate((vec4 *)&mat, (float *)&tran);
-	return mat;
+	glm_translate((vec4 *)mat, (float *)&tran);
 }
 
-fglMat4 fgl_Rotate(fglMat4 mat, float ang, fglVec3 tran)
+void fgl_Rotate(fglMat4 *mat, float ang, fglVec3 tran)
 {
-	glm_rotate((vec4 *)&mat, ang, (float *)&tran);
-	return mat;
+	glm_rotate((vec4 *)mat, ang, (float *)&tran);
 }
 
-fglMat4 fgl_Scale(fglMat4 mat, fglVec3 tran)
+void fgl_Scale(fglMat4 *mat, fglVec3 tran)
 {
-	glm_scale((vec4 *)&mat, (float *)&tran);
-	return mat;
+	glm_scale((vec4 *)mat, (float *)&tran);
 }
 
 fglVec3 fgl_Cross3(fglVec3 a, fglVec3 b)
 {
-	fglVec3 c = {0};
-	glm_vec_cross((float *)&a, (float *)&b, (float *)&c);
-	return c;
+	fglVec3 res;
+	res.X = a.Y * b.Z - a.Z * b.Y;
+	res.Y = a.Z * b.X - a.X * b.Z;
+	res.Z = a.X * b.Y - a.Y * b.X;
+	return res;
+
+	// fglVec3 c = {0};
+	// glm_vec_cross((float *)&a, (float *)&b, (float *)&c);
+	// return c;
 }
 
 FglColor fglColor(uint8_t r, uint8_t g, uint8_t b)

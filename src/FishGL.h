@@ -7,21 +7,9 @@ extern "C"
 
 #include <FishGLConfig.h>
 
-	// #define XElement 0
-	// #define YElement 1
-	// #define ZElement 2
-	// #define WElement 3
-
 #define FGL_PACKED __attribute__((packed))
 #define FGL_DISCARD true
 #define FGL_KEEP false
-
-	/*#define COPY_VEC2(dst, src)            \
-		do                                 \
-		{                                  \
-			dst[XElement] = src[XElement]; \
-			dst[YElement] = src[YElement]; \
-		} while (0)*/
 
 	typedef struct
 	{
@@ -137,24 +125,6 @@ extern "C"
 		FglShaderType_Fragment,
 	} FglShaderType;
 
-	// These are not vec3 and vec2 because of padding
-	/*typedef union
-	{
-		float Vec[3];
-	} FglVarying;
-
-	typedef union
-	{
-		mat3 Mat;
-
-		struct
-		{
-			FglVarying A;
-			FglVarying B;
-			FglVarying C;
-		};
-	} FglVaryingIn;*/
-
 	typedef struct
 	{
 		void *VideoMemory;
@@ -209,10 +179,12 @@ extern "C"
 	// Drawing
 	FGL_API void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1);
 	FGL_API void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
-	FGL_API void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
+	// FGL_API void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
 	FGL_API void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
+	void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len);
 
 	// Math
+	fglVec2 fgl_Vec2(float X, float Y);
 	fglVec3 fgl_Vec3(float X, float Y, float Z);
 	fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z);
 
@@ -225,9 +197,9 @@ extern "C"
 	void fgl_Identity_4x4(fglMat4 *mat);
 
 	fglMat4 fgl_Make_Translate_4x4(fglVec3 tran);
-	fglMat4 fgl_Translate(fglMat4 mat, fglVec3 tran);
-	fglMat4 fgl_Rotate(fglMat4 mat, float ang, fglVec3 tran);
-	fglMat4 fgl_Scale(fglMat4 mat, fglVec3 tran);
+	void fgl_Translate(fglMat4 *mat, fglVec3 tran);
+	void fgl_Rotate(fglMat4 *mat, float ang, fglVec3 tran);
+	void fgl_Scale(fglMat4 *mat, fglVec3 tran);
 
 	fglVec3 fgl_Cross3(fglVec3 a, fglVec3 b);
 

@@ -216,3 +216,4 @@ void core2_st7789_test();
 uint16_t core2_rgb565(uint8_t r, uint8_t g, uint8_t b);
 void core2_rgb565_deconstr(uint16_t clr, uint8_t *r, uint8_t *g, uint8_t *b);
 void core2_st7789_draw_fb(uint16_t *colors);
+//void core2_st7789_draw_fb_scanline(uint16_t *colors, int y);
