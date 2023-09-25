@@ -24,6 +24,27 @@ extern "C"
 		dst[YElement] = src[YElement]; \
 	} while (0)
 
+	typedef struct
+	{
+		float X;
+		float Y;
+	} fglVec2;
+
+	typedef struct
+	{
+		float X;
+		float Y;
+		float Z;
+	} fglVec3;
+
+	typedef struct
+	{
+		float X;
+		float Y;
+		float Z;
+		float W;
+	} fglVec4;
+
 	typedef enum
 	{
 		PixelOrder_Unknown,
@@ -76,12 +97,12 @@ extern "C"
 
 	typedef struct
 	{
-		vec3 A, B, C;
+		fglVec3 A, B, C;
 	} FglTriangle3;
 
 	typedef struct
 	{
-		vec2 A, B, C;
+		fglVec2 A, B, C;
 	} FglTriangle2;
 
 	typedef enum
@@ -105,10 +126,7 @@ extern "C"
 	// These are not vec3 and vec2 because of padding
 	typedef union
 	{
-		 float Vec3[3];
-		 float Vec2[2];
-
-		// float Vec[3];
+		float Vec[3];
 	} FglVarying;
 
 	typedef union
@@ -152,8 +170,8 @@ extern "C"
 		void *FragmentShader;
 	} FglState;
 
-	typedef bool (*FglVertexFunc)(FglState *State, vec3 Vert);
-	typedef bool (*FglFragmentFunc)(FglState *State, vec2 UV, FglColor *OutColor);
+	typedef bool (*FglVertexFunc)(FglState *State, fglVec3 Vert);
+	typedef bool (*FglFragmentFunc)(FglState *State, fglVec2 UV, FglColor *OutColor);
 
 	// Basics
 	FglColor fglColor(uint8_t r, uint8_t g, uint8_t b);
