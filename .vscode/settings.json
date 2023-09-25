@@ -8,6 +8,7 @@
         "string_view": "cpp",
         "initializer_list": "cpp",
         "fishglshader.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "random": "c"
     }
 }
