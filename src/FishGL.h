@@ -170,7 +170,7 @@ extern "C"
 		void *FragmentShader;
 	} FglState;
 
-	typedef bool (*FglVertexFunc)(FglState *State, fglVec3 Vert);
+	typedef bool (*FglVertexFunc)(FglState *State, fglVec3* Vert);
 	typedef bool (*FglFragmentFunc)(FglState *State, fglVec2 UV, FglColor *OutColor);
 
 	// Basics
@@ -199,7 +199,7 @@ extern "C"
 	FGL_API void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
 
 	// Math
-	void fgl_Mul_4x4_4x1(const mat4 mat, const vec4 vec, vec4 res);
+	void fgl_Mul_4x4_4x1(const mat4 mat, const fglVec4 vec, fglVec4* res);
 
 #ifdef __cplusplus
 }

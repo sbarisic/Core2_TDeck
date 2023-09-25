@@ -8,31 +8,41 @@
 #define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
 #define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
 
-void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max);
-void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max);
-bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val);
+// void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max);
+// void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max);
+// bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val);
 void fglBlend(FglColor Src, FglColor *Dst);
 
 FGL_API FglState RenderState;
 
-void fgl_Mul_4x4_4x1(const mat4 mat, const vec4 vec, vec4 res)
+void fgl_Mul_4x4_4x1(const mat4 mat, const fglVec4 vec, fglVec4 *res)
 {
 	// vec4 temp_res;
-	dspm_mult_4x4x1_f32_ae32((const float *)mat, (const float *)vec, (float *)res);
+	dspm_mult_4x4x1_f32_ae32((const float *)mat, (const float *)&vec, (float *)res);
 
 	// glm_vec4_copy(temp_res, res);
-
-sizeof(FglVarying);
 }
 
-void fgl_Mul_3x3_3x1(const mat3 mat, const vec3 vec, vec3 res)
+void fgl_Mul_3x3_3x1(const mat3 mat, const fglVec3 vec, fglVec3 *res)
 {
 	mat3 mat2;
 	glm_mat3_copy((float *)mat, mat2);
 	glm_mat3_transpose(mat2);
 
-	dspm_mult_3x3x1_f32_ae32((const float *)mat2, (const float *)vec, (float *)res);
+	dspm_mult_3x3x1_f32_ae32((const float *)mat2, (const float *)&vec, (float *)res);
 }
+
+void fgl_Sub_3x1_3x1(const vec3 a, const vec3 b, vec3 res)
+{
+	dsps_sub_f32_ae32(a, b, res, 3, 1, 1, 1);
+}
+
+/*fglVec3 fgl_Sub_3x1_3x1(const fglVec3 a, const fglVec3 b)
+{
+	fglVec3 res = { 0 };
+	dsps_add_f32_ae32(&a, &b, &res, 3, 1, 1, 1);
+	return res;
+}*/
 
 FglColor fglColor(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -47,6 +57,55 @@ void fglColorToRGB(FglColor clr, uint8_t *r, uint8_t *g, uint8_t *b)
 	*r = clr.R << 3;
 	*g = clr.G << 2;
 	*b = clr.B << 3;
+}
+
+void fglBoundingBox(FglTriangle3 *Tri, fglVec3 *Min, fglVec3 *Max)
+{
+	Min->X = fgl_fminf(fgl_fminf(Tri->A.X, Tri->B.X), Tri->C.X);
+	Min->Y = fgl_fminf(fgl_fminf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
+	Min->Z = fgl_fminf(fgl_fminf(Tri->A.Z, Tri->B.Z), Tri->C.Z);
+
+	Max->X = fgl_fmaxf(fgl_fmaxf(Tri->A.X, Tri->B.X), Tri->C.X);
+	Max->Y = fgl_fmaxf(fgl_fmaxf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
+	Max->Z = fgl_fmaxf(fgl_fmaxf(Tri->A.Z, Tri->B.Z), Tri->C.Z);
+}
+
+void fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max)
+{
+	Min->X = fgl_fminf(fgl_fminf(Tri->A.X, Tri->B.X), Tri->C.X);
+	Min->Y = fgl_fminf(fgl_fminf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
+
+	Max->X = fgl_fmaxf(fgl_fmaxf(Tri->A.X, Tri->B.X), Tri->C.X);
+	Max->Y = fgl_fmaxf(fgl_fmaxf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
+}
+
+bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, fglVec3 *Val)
+{
+	fglVec3 U;
+	fglVec3 a;
+	fglVec3 b;
+
+	a.X = (Tri->C.X) - (Tri->A.X);
+	a.Y = (Tri->B.X) - (Tri->A.X);
+	a.Z = (Tri->A.X) - (float)X;
+
+	b.X = (Tri->C.Y) - (Tri->A.Y);
+	b.Y = (Tri->B.Y) - (Tri->A.Y);
+	b.Z = (Tri->A.Y) - (float)Y;
+
+	glm_vec_cross((float *)&a, (float *)&b, (float *)&U);
+
+	if (fabsf(U.Z) < 1)
+		return false;
+
+	Val->X = 1.0f - ((U.X + U.Y) / U.Z);
+	Val->Y = U.Y / U.Z;
+	Val->Z = U.X / U.Z;
+
+	if (Val->X < 0 || Val->Y < 0 || Val->Z < 0)
+		return false;
+
+	return true;
 }
 
 void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order)
@@ -83,9 +142,13 @@ void fglSetState(FglState *State)
 void fglBindShader(void *Shader, FglShaderType ShaderType)
 {
 	if (ShaderType == FglShaderType_Fragment)
+	{
 		RenderState.FragmentShader = (FglFragmentFunc)Shader;
+	}
 	else if (ShaderType == FglShaderType_Vertex)
+	{
 		RenderState.VertexShader = (FglVertexFunc)Shader;
+	}
 }
 
 // Buffers
@@ -208,21 +271,21 @@ void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int3
 
 void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
 {
-	fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement]);
-	fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
-	fglDrawLine(Buffer, Color, (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
+	// fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement]);
+	// fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
+	// fglDrawLine(Buffer, Color, (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
 }
 
 void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
 {
-	vec2 Min, Max;
-	vec3 V;
-	fglBoundingRect(Tri, Min, Max);
+	fglVec2 Min, Max;
+	fglVec3 V;
+	fglBoundingRect(Tri, &Min, &Max);
 
-	for (size_t y = (size_t)Min[YElement]; y < Max[YElement]; y++)
-		for (size_t x = (size_t)Min[XElement]; x < Max[XElement]; x++)
+	for (size_t y = (size_t)Min.Y; y < Max.Y; y++)
+		for (size_t x = (size_t)Min.X; x < Max.X; x++)
 		{
-			if (fglBarycentric(Tri, x, y, V))
+			if (fglBarycentric(Tri, x, y, &V))
 				Buffer->Pixels[y * Buffer->Width + x] = Color;
 		}
 }
@@ -231,9 +294,9 @@ void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle
 {
 	if (UVsIn != NULL)
 	{
-		memcpy(RenderState.VarIn[0].A.Vec2, &UVsIn->A, sizeof(vec2));
-		memcpy(RenderState.VarIn[0].B.Vec2, &UVsIn->B, sizeof(vec2));
-		memcpy(RenderState.VarIn[0].C.Vec2, &UVsIn->C, sizeof(vec2));
+		memcpy(RenderState.VarIn[0].A.Vec, &UVsIn->A, sizeof(vec2));
+		memcpy(RenderState.VarIn[0].B.Vec, &UVsIn->B, sizeof(vec2));
+		memcpy(RenderState.VarIn[0].C.Vec, &UVsIn->C, sizeof(vec2));
 	}
 
 	FglTriangle3 Tri = *TriangleIn;
@@ -244,35 +307,34 @@ void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle
 		RenderState.CurShader = FglShaderType_Vertex;
 
 		RenderState.VertNum = 0;
-		if (VertShader(&RenderState, Tri.A) == FGL_DISCARD)
+		if (VertShader(&RenderState, &Tri.A) == FGL_DISCARD)
 			return;
 
 		RenderState.VertNum = 1;
-		if (VertShader(&RenderState, Tri.B) == FGL_DISCARD)
+		if (VertShader(&RenderState, &Tri.B) == FGL_DISCARD)
 			return;
 
 		RenderState.VertNum = 2;
-		if (VertShader(&RenderState, Tri.C) == FGL_DISCARD)
+		if (VertShader(&RenderState, &Tri.C) == FGL_DISCARD)
 			return;
 	}
 
-	vec2 Min, Max;
-	fglBoundingRect(&Tri, Min, Max);
+	fglVec2 Min, Max;
+	fglBoundingRect(&Tri, &Min, &Max);
 
-	for (size_t y = (size_t)Min[YElement]; y < Max[YElement]; y++)
-		for (size_t x = (size_t)Min[XElement]; x < Max[XElement]; x++)
+	for (size_t y = (size_t)Min.Y; y < Max.Y; y++)
+		for (size_t x = (size_t)Min.X; x < Max.X; x++)
 		{
-			vec3 Barycentric;
-			if (fglBarycentric(&Tri, x, y, Barycentric))
+			fglVec3 Barycentric;
+			if (fglBarycentric(&Tri, x, y, &Barycentric))
 			{
 				// glm_mat3_mulv((vec3 *)&RenderState.VarIn[0].Mat, Barycentric, (float *)&RenderState.VarOut[0].Vec3);
-				 fgl_Mul_3x3_3x1(RenderState.VarIn[0].Mat, Barycentric, RenderState.VarOut[0].Vec3);
 
 				if (RenderState.FragmentShader != NULL)
 				{
-					for (size_t i = 1; i < FGL_VARYING_COUNT; i++)
+					for (size_t i = 0; i < FGL_VARYING_COUNT; i++)
 					{
-						fgl_Mul_3x3_3x1(RenderState.VarIn[i].Mat, Barycentric, RenderState.VarOut[i].Vec3);
+						fgl_Mul_3x3_3x1(RenderState.VarIn[i].Mat, Barycentric, RenderState.VarOut[i].Vec);
 						// glm_mat3_mulv((vec3 *)&(RenderState.VarIn[i].Mat), Barycentric, (float *)&(RenderState.VarOut[i].Vec3));
 					}
 
@@ -280,66 +342,18 @@ void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle
 					FglFragmentFunc FragShader = (FglFragmentFunc)RenderState.FragmentShader;
 					RenderState.CurShader = FglShaderType_Fragment;
 
-					if (FragShader(&RenderState, RenderState.VarOut[0].Vec2, &OutClr) == FGL_DISCARD)
+					if (FragShader(&RenderState, *(fglVec2 *)RenderState.VarOut[0].Vec, &OutClr) == FGL_DISCARD)
 						continue;
 
 					fglBlend(OutClr, &Buffer->Pixels[y * Buffer->Width + x]);
 				}
 				else
-					fglBlend(fglShaderSampleTextureUV(&RenderState.Textures[0], RenderState.VarOut[0].Vec2), &Buffer->Pixels[y * Buffer->Width + x]);
+				{
+					fgl_Mul_3x3_3x1(RenderState.VarIn[0].Mat, Barycentric, RenderState.VarOut[0].Vec);
+					fglBlend(fglShaderSampleTextureUV(&RenderState.Textures[0], *(fglVec2 *)RenderState.VarOut[0].Vec), &Buffer->Pixels[y * Buffer->Width + x]);
+				}
 			}
 		}
-}
-
-// Util functions
-
-void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max)
-{
-	Min[XElement] = fgl_fminf(fgl_fminf(Tri->A[XElement], Tri->B[XElement]), Tri->C[XElement]);
-	Min[YElement] = fgl_fminf(fgl_fminf(Tri->A[YElement], Tri->B[YElement]), Tri->C[YElement]);
-	Min[ZElement] = fgl_fminf(fgl_fminf(Tri->A[ZElement], Tri->B[ZElement]), Tri->C[ZElement]);
-
-	Max[XElement] = fgl_fmaxf(fgl_fmaxf(Tri->A[XElement], Tri->B[XElement]), Tri->C[XElement]);
-	Max[YElement] = fgl_fmaxf(fgl_fmaxf(Tri->A[YElement], Tri->B[YElement]), Tri->C[YElement]);
-	Max[ZElement] = fgl_fmaxf(fgl_fmaxf(Tri->A[ZElement], Tri->B[ZElement]), Tri->C[ZElement]);
-}
-
-void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max)
-{
-	Min[XElement] = fgl_fminf(fgl_fminf(Tri->A[XElement], Tri->B[XElement]), Tri->C[XElement]);
-	Min[YElement] = fgl_fminf(fgl_fminf(Tri->A[YElement], Tri->B[YElement]), Tri->C[YElement]);
-
-	Max[XElement] = fgl_fmaxf(fgl_fmaxf(Tri->A[XElement], Tri->B[XElement]), Tri->C[XElement]);
-	Max[YElement] = fgl_fmaxf(fgl_fmaxf(Tri->A[YElement], Tri->B[YElement]), Tri->C[YElement]);
-}
-
-bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val)
-{
-	vec3 U;
-	vec3 a;
-	vec3 b;
-
-	a[XElement] = (Tri->C[XElement]) - (Tri->A[XElement]);
-	a[YElement] = (Tri->B[XElement]) - (Tri->A[XElement]);
-	a[ZElement] = (Tri->A[XElement]) - (float)X;
-
-	b[XElement] = (Tri->C[YElement]) - (Tri->A[YElement]);
-	b[YElement] = (Tri->B[YElement]) - (Tri->A[YElement]);
-	b[ZElement] = (Tri->A[YElement]) - (float)Y;
-
-	glm_vec_cross(a, b, U);
-
-	if (fabsf(U[ZElement]) < 1)
-		return false;
-
-	Val[XElement] = 1.0f - ((U[XElement] + U[YElement]) / U[ZElement]);
-	Val[YElement] = U[YElement] / U[ZElement];
-	Val[ZElement] = U[XElement] / U[ZElement];
-
-	if (Val[XElement] < 0 || Val[YElement] < 0 || Val[ZElement] < 0)
-		return false;
-
-	return true;
 }
 
 void fglBlend(FglColor Src, FglColor *Dst)

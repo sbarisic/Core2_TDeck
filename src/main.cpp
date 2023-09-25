@@ -28,41 +28,26 @@ FglBuffer TestTex = {0};
 FglTriangle3 Tri[TRI_COUNT];
 FglTriangle2 UV[TRI_COUNT];
 
-bool VertexShader(FglState *State, vec3 Vert)
+bool VertexShader(FglState *State, fglVec3 *Vert)
 {
     // mat4 res;
     // glm_mat4_copy(State->MatModel, res);
 
-    vec4 v1 = {Vert[XElement], Vert[YElement], Vert[ZElement], 1};
+    fglVec4 v1 = {.X = Vert->X, .Y = Vert->Y, .Z = Vert->Z, .W = 1};
     // glm_mat4_mulv(res, v1, v1);
 
-    fgl_Mul_4x4_4x1(State->MatModel, v1, v1);
+    fgl_Mul_4x4_4x1(State->MatModel, v1, &v1);
 
-    glm_vec4_copy3(v1, Vert);
+    *Vert = *(fglVec3 *)&v1;
+    // glm_vec4_copy3(v1, Vert);
     return FGL_KEEP;
 }
 
-bool FragmentShader(FglState *State, vec2 UV, FglColor *OutColor)
+bool FragmentShader(FglState *State, fglVec2 UV, FglColor *OutColor)
 {
-    vec2 newUV = {UV[0], UV[1]};
-    // newUV[YElement] = 1 - newUV[YElement];
-
-    FglColor C = fglShaderSampleTextureUV(&State->Textures[0], newUV);
-
-    // vec3 C2;
-    // glm_vec_copy(fglShaderGetVarying(1)->Vec3, C2);
-
-    // uint8_t r, g, b;
-    // core2_rgb565_deconstr(C, &r, &g, &b);
-
-    // C = core2_rgb565((int)(r * (C2[XElement] / 255)), (int)(g * (C2[YElement] / 255)), (int)(b * (C2[ZElement] / 255)));
-
-    // C.R = (int)(C.R * (C2[XElement] / 255));
-    // C.G = (int)(C.G * (C2[YElement] / 255));
-    // C.B = (int)(C.B * (C2[ZElement] / 255));
+    FglColor C = fglShaderSampleTextureUV(&State->Textures[0], UV);
 
     *OutColor = C;
-
     return FGL_KEEP;
 }
 

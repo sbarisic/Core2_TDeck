@@ -28,9 +28,9 @@ FglColor fglShaderSampleTexture(FglBuffer *TextureBuffer, int32_t X, int32_t Y)
 	return TextureBuffer->Pixels[Y * TextureBuffer->Width + X];
 }
 
-FglColor fglShaderSampleTextureUV(FglBuffer *TextureBuffer, vec2 UV)
+FglColor fglShaderSampleTextureUV(FglBuffer *TextureBuffer, fglVec2 UV)
 {
-	return fglShaderSampleTexture(TextureBuffer, (int32_t)(UV[XElement] * TextureBuffer->Width), (int32_t)(UV[YElement] * TextureBuffer->Height));
+	return fglShaderSampleTexture(TextureBuffer, (int32_t)(UV.X * TextureBuffer->Width), (int32_t)(UV.Y * TextureBuffer->Height));
 }
 
 FglVarying *fglShaderGetVarying(int32_t Num)
