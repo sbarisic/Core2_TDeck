@@ -1,10 +1,10 @@
 #pragma once
 
-#define FGL_MAX_TEXTURES 16
+#define FGL_MAX_TEXTURES 8
 #define FGL_VARYING_COUNT 3 // Must be more or equal to 1
 
 #define FGL_API
-#define FGL_INLINE 
+//#define FGL_INLINE static inline
 
 // For a custom allocator, used by some stb libraries
 // Can be a stub function if you don't plan on using
@@ -13,13 +13,13 @@
 // #define FGL_REALLOC
 // #define FGL_FREE
 
-#ifndef FGL_API
-#define FGL_API
-#endif
+//#ifndef FGL_API
+//#define FGL_API
+//#endif
 
-#ifndef FGL_INLINE
-#define FGL_INLINE
-#endif
+//#ifndef FGL_INLINE
+//#define FGL_INLINE
+//#endif
 
 #ifdef FGL_IMPLEMENTATION
 #define FGL_EXTERN

@@ -30,11 +30,13 @@ FglTriangle2 UV[TRI_COUNT];
 
 bool VertexShader(FglState *State, vec3 Vert)
 {
-    mat4 res;
-    glm_mat4_copy(State->MatModel, res);
+    // mat4 res;
+    // glm_mat4_copy(State->MatModel, res);
 
     vec4 v1 = {Vert[XElement], Vert[YElement], Vert[ZElement], 1};
-    glm_mat4_mulv(res, v1, v1);
+    // glm_mat4_mulv(res, v1, v1);
+
+    fgl_Mul_4x4_4x1(State->MatModel, v1, v1);
 
     glm_vec4_copy3(v1, Vert);
     return FGL_KEEP;
@@ -69,6 +71,7 @@ void fgl_init(int W, int H, int BPP)
     Width = W;
     Height = H;
 
+    fglInit(NULL, W, H, BPP, 0, PixelOrder_RGB_565);
     ColorBuffer = fglCreateBuffer(malloc(W * H * sizeof(FglColor)), W, H);
 
     FglColor *Buff1 = (FglColor *)malloc(sizeof(FglColor) * W * H);
@@ -133,6 +136,7 @@ void draw_thread(void *args)
         trans[YElement] = 100;
         glm_translate_make(fgl->MatModel, trans);
         glm_rotate(fgl->MatModel, sinf(ms / 1000.0f), rot_axis);
+        glm_mat4_transpose(fgl->MatModel);
 
         for (size_t i = 0; i < TRI_COUNT; i++)
             fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);
@@ -142,6 +146,7 @@ void draw_thread(void *args)
         glm_translate_make(fgl->MatModel, trans);
         glm_rotate(fgl->MatModel, cosf(ms / 1000.0f) * 0.95f, rot_axis);
         glm_scale(fgl->MatModel, scal);
+        glm_mat4_transpose(fgl->MatModel);
 
         for (size_t i = 0; i < TRI_COUNT; i++)
             fglRenderTriangle3(&ColorBuffer, &Tri[i], &UV[i]);

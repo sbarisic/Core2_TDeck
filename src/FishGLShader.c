@@ -1,7 +1,7 @@
 #include <FishGL.h>
 #include <FishGLShader.h>
 
-FGL_INLINE FglColor fglShaderSampleTexture(FglBuffer *TextureBuffer, int32_t X, int32_t Y)
+FglColor fglShaderSampleTexture(FglBuffer *TextureBuffer, int32_t X, int32_t Y)
 {
 	FglState *RenderState = fglGetState();
 
@@ -28,12 +28,12 @@ FGL_INLINE FglColor fglShaderSampleTexture(FglBuffer *TextureBuffer, int32_t X, 
 	return TextureBuffer->Pixels[Y * TextureBuffer->Width + X];
 }
 
-FGL_INLINE FglColor fglShaderSampleTextureUV(FglBuffer *TextureBuffer, vec2 UV)
+FglColor fglShaderSampleTextureUV(FglBuffer *TextureBuffer, vec2 UV)
 {
 	return fglShaderSampleTexture(TextureBuffer, (int32_t)(UV[XElement] * TextureBuffer->Width), (int32_t)(UV[YElement] * TextureBuffer->Height));
 }
 
-FGL_INLINE FglVarying *fglShaderGetVarying(int32_t Num)
+FglVarying *fglShaderGetVarying(int32_t Num)
 {
 	FglState *RenderState = fglGetState();
 

@@ -15,6 +15,8 @@ extern "C"
 #define FGL_DISCARD true
 #define FGL_KEEP false
 
+#define FGL_PACKED __attribute__((packed))
+
 #define COPY_VEC2(dst, src)            \
 	do                                 \
 	{                                  \
@@ -26,7 +28,8 @@ extern "C"
 	{
 		PixelOrder_Unknown,
 		PixelOrder_RGBA,
-		PixelOrder_ABGR
+		PixelOrder_ABGR,
+		PixelOrder_RGB_565,
 	} PixelOrder;
 
 	// 16 bit 565 RGB, HI and LO bytes are swapped
@@ -37,16 +40,16 @@ extern "C"
 			unsigned int R : 5;
 			unsigned int G : 6;
 			unsigned int B : 5;
-		} __attribute__((packed));
+		} FGL_PACKED;
 
 		struct
 		{
 			unsigned int u8_LO : 8;
 			unsigned int u8_HI : 8;
-		} __attribute__((packed));
+		} FGL_PACKED;
 
 		unsigned short u16;
-	} __attribute__((packed)) FglColor;
+	} FGL_PACKED FglColor;
 
 	/*typedef struct __attribute__((packed))
 	{
@@ -62,7 +65,7 @@ extern "C"
 		{
 			void *Memory;
 			FglColor *Pixels;
-		};
+		} FGL_PACKED;
 
 		int32_t Width;
 		int32_t Height;
@@ -102,8 +105,10 @@ extern "C"
 	// These are not vec3 and vec2 because of padding
 	typedef union
 	{
-		float Vec3[3];
-		float Vec2[2];
+		 float Vec3[3];
+		 float Vec2[2];
+
+		// float Vec[3];
 	} FglVarying;
 
 	typedef union
@@ -155,25 +160,28 @@ extern "C"
 	void fglColorToRGB(FglColor clr, uint8_t *r, uint8_t *g, uint8_t *b);
 
 	// Initialization and state
-	FGL_API FGL_INLINE void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order);
-	FGL_API FGL_INLINE FglState *fglGetState();
-	FGL_API FGL_INLINE void fglSetState(FglState *State);
+	FGL_API void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order);
+	FGL_API FglState *fglGetState();
+	FGL_API void fglSetState(FglState *State);
 
 	// Shaders
-	FGL_API FGL_INLINE void fglBindShader(void *Shader, FglShaderType ShaderType);
+	FGL_API void fglBindShader(void *Shader, FglShaderType ShaderType);
 
 	// Buffer functions and textures
-	FGL_API FGL_INLINE FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height);
-	FGL_API FGL_INLINE FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len);
-	FGL_API FGL_INLINE void fglDisplayToFramebuffer(FglBuffer *Buffer);
-	FGL_API FGL_INLINE void fglClearBuffer(FglBuffer *Buffer, FglColor Clr);
-	FGL_API FGL_INLINE void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot);
+	FGL_API FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height);
+	FGL_API FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len);
+	FGL_API void fglDisplayToFramebuffer(FglBuffer *Buffer);
+	FGL_API void fglClearBuffer(FglBuffer *Buffer, FglColor Clr);
+	FGL_API void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot);
 
 	// Drawing
-	FGL_API FGL_INLINE void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1);
-	FGL_API FGL_INLINE void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
-	FGL_API FGL_INLINE void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
-	FGL_API FGL_INLINE void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
+	FGL_API void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1);
+	FGL_API void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
+	FGL_API void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
+	FGL_API void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
+
+	// Math
+	void fgl_Mul_4x4_4x1(const mat4 mat, const vec4 vec, vec4 res);
 
 #ifdef __cplusplus
 }

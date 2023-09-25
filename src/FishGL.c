@@ -2,17 +2,37 @@
 #include <FishGL.h>
 #include <FishGLShader.h>
 
+#include <esp_dsp.h>
 #include <byteswap.h>
 
 #define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
 #define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
 
-FGL_INLINE void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max);
-FGL_INLINE void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max);
-FGL_INLINE bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val);
-FGL_INLINE void fglBlend(FglColor Src, FglColor *Dst);
+void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max);
+void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max);
+bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val);
+void fglBlend(FglColor Src, FglColor *Dst);
 
 FGL_API FglState RenderState;
+
+void fgl_Mul_4x4_4x1(const mat4 mat, const vec4 vec, vec4 res)
+{
+	// vec4 temp_res;
+	dspm_mult_4x4x1_f32_ae32((const float *)mat, (const float *)vec, (float *)res);
+
+	// glm_vec4_copy(temp_res, res);
+
+sizeof(FglVarying);
+}
+
+void fgl_Mul_3x3_3x1(const mat3 mat, const vec3 vec, vec3 res)
+{
+	mat3 mat2;
+	glm_mat3_copy((float *)mat, mat2);
+	glm_mat3_transpose(mat2);
+
+	dspm_mult_3x3x1_f32_ae32((const float *)mat2, (const float *)vec, (float *)res);
+}
 
 FglColor fglColor(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -29,7 +49,7 @@ void fglColorToRGB(FglColor clr, uint8_t *r, uint8_t *g, uint8_t *b)
 	*b = clr.B << 3;
 }
 
-FGL_INLINE void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order)
+void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int32_t Stride, PixelOrder Order)
 {
 	memset(&RenderState, 0, sizeof(FglState));
 
@@ -48,19 +68,19 @@ FGL_INLINE void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_
 	RenderState.BlendMode = FglBlendMode_None;
 }
 
-FGL_INLINE FglState *fglGetState()
+FglState *fglGetState()
 {
 	return &RenderState;
 }
 
-FGL_INLINE void fglSetState(FglState *State)
+void fglSetState(FglState *State)
 {
 	RenderState = *State;
 }
 
 // Shaders
 
-FGL_INLINE void fglBindShader(void *Shader, FglShaderType ShaderType)
+void fglBindShader(void *Shader, FglShaderType ShaderType)
 {
 	if (ShaderType == FglShaderType_Fragment)
 		RenderState.FragmentShader = (FglFragmentFunc)Shader;
@@ -70,7 +90,7 @@ FGL_INLINE void fglBindShader(void *Shader, FglShaderType ShaderType)
 
 // Buffers
 
-FGL_INLINE FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height)
+FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height)
 {
 	FglBuffer Buffer;
 	Buffer.Memory = Memory;
@@ -81,7 +101,7 @@ FGL_INLINE FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height
 	return Buffer;
 }
 
-FGL_INLINE FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len)
+FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len)
 {
 	int32_t X, Y, Comp;
 	FglBuffer Buffer;
@@ -101,13 +121,13 @@ FGL_INLINE FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len)
 	return Buffer;
 }
 
-FGL_INLINE void fglClearBuffer(FglBuffer *Buffer, FglColor Clr)
+void fglClearBuffer(FglBuffer *Buffer, FglColor Clr)
 {
 	for (size_t i = 0; i < Buffer->PixelCount; i++)
 		Buffer->Pixels[i] = Clr;
 }
 
-FGL_INLINE void fglDisplayToFramebuffer(FglBuffer *Buffer)
+void fglDisplayToFramebuffer(FglBuffer *Buffer)
 {
 	if (RenderState.BPP == 32 && RenderState.Stride == 0 && RenderState.Order == PixelOrder_RGBA)
 	{
@@ -118,14 +138,14 @@ FGL_INLINE void fglDisplayToFramebuffer(FglBuffer *Buffer)
 	// TODO: Handle stride, pixel order and pixel size
 }
 
-FGL_INLINE void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot)
+void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot)
 {
 	RenderState.Textures[Slot] = *TextureBuffer;
 }
 
 // Drawing
 
-FGL_INLINE void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1)
+void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1)
 {
 	bool Steep = false;
 
@@ -186,14 +206,14 @@ FGL_INLINE void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32
 	}
 }
 
-FGL_INLINE void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
+void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
 {
 	fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement]);
 	fglDrawLine(Buffer, Color, (int32_t)Tri->A[XElement], (int32_t)Tri->A[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
 	fglDrawLine(Buffer, Color, (int32_t)Tri->B[XElement], (int32_t)Tri->B[YElement], (int32_t)Tri->C[XElement], (int32_t)Tri->C[YElement]);
 }
 
-FGL_INLINE void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
+void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri)
 {
 	vec2 Min, Max;
 	vec3 V;
@@ -207,13 +227,13 @@ FGL_INLINE void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3
 		}
 }
 
-FGL_INLINE void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle2 *UVsIn)
+void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle2 *UVsIn)
 {
 	if (UVsIn != NULL)
 	{
-		memcpy(&RenderState.VarIn[0].A.Vec2, &UVsIn->A, sizeof(vec2));
-		memcpy(&RenderState.VarIn[0].B.Vec2, &UVsIn->B, sizeof(vec2));
-		memcpy(&RenderState.VarIn[0].C.Vec2, &UVsIn->C, sizeof(vec2));
+		memcpy(RenderState.VarIn[0].A.Vec2, &UVsIn->A, sizeof(vec2));
+		memcpy(RenderState.VarIn[0].B.Vec2, &UVsIn->B, sizeof(vec2));
+		memcpy(RenderState.VarIn[0].C.Vec2, &UVsIn->C, sizeof(vec2));
 	}
 
 	FglTriangle3 Tri = *TriangleIn;
@@ -245,12 +265,16 @@ FGL_INLINE void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, 
 			vec3 Barycentric;
 			if (fglBarycentric(&Tri, x, y, Barycentric))
 			{
-				glm_mat3_mulv((vec3 *)&RenderState.VarIn[0].Mat, Barycentric, (float *)&RenderState.VarOut[0].Vec3);
+				// glm_mat3_mulv((vec3 *)&RenderState.VarIn[0].Mat, Barycentric, (float *)&RenderState.VarOut[0].Vec3);
+				 fgl_Mul_3x3_3x1(RenderState.VarIn[0].Mat, Barycentric, RenderState.VarOut[0].Vec3);
 
 				if (RenderState.FragmentShader != NULL)
 				{
 					for (size_t i = 1; i < FGL_VARYING_COUNT; i++)
-						glm_mat3_mulv((vec3 *)&(RenderState.VarIn[i].Mat), Barycentric, (float *)&(RenderState.VarOut[i].Vec3));
+					{
+						fgl_Mul_3x3_3x1(RenderState.VarIn[i].Mat, Barycentric, RenderState.VarOut[i].Vec3);
+						// glm_mat3_mulv((vec3 *)&(RenderState.VarIn[i].Mat), Barycentric, (float *)&(RenderState.VarOut[i].Vec3));
+					}
 
 					FglColor OutClr;
 					FglFragmentFunc FragShader = (FglFragmentFunc)RenderState.FragmentShader;
@@ -269,7 +293,7 @@ FGL_INLINE void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, 
 
 // Util functions
 
-FGL_INLINE void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max)
+void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max)
 {
 	Min[XElement] = fgl_fminf(fgl_fminf(Tri->A[XElement], Tri->B[XElement]), Tri->C[XElement]);
 	Min[YElement] = fgl_fminf(fgl_fminf(Tri->A[YElement], Tri->B[YElement]), Tri->C[YElement]);
@@ -280,7 +304,7 @@ FGL_INLINE void fglBoundingBox(FglTriangle3 *Tri, vec3 Min, vec3 Max)
 	Max[ZElement] = fgl_fmaxf(fgl_fmaxf(Tri->A[ZElement], Tri->B[ZElement]), Tri->C[ZElement]);
 }
 
-FGL_INLINE void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max)
+void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max)
 {
 	Min[XElement] = fgl_fminf(fgl_fminf(Tri->A[XElement], Tri->B[XElement]), Tri->C[XElement]);
 	Min[YElement] = fgl_fminf(fgl_fminf(Tri->A[YElement], Tri->B[YElement]), Tri->C[YElement]);
@@ -289,7 +313,7 @@ FGL_INLINE void fglBoundingRect(FglTriangle3 *Tri, vec2 Min, vec2 Max)
 	Max[YElement] = fgl_fmaxf(fgl_fmaxf(Tri->A[YElement], Tri->B[YElement]), Tri->C[YElement]);
 }
 
-FGL_INLINE bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val)
+bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val)
 {
 	vec3 U;
 	vec3 a;
@@ -318,7 +342,7 @@ FGL_INLINE bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, vec3 Val
 	return true;
 }
 
-FGL_INLINE void fglBlend(FglColor Src, FglColor *Dst)
+void fglBlend(FglColor Src, FglColor *Dst)
 {
 	if (RenderState.BlendMode == FglBlendMode_None)
 		*Dst = Src;
