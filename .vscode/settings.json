@@ -9,6 +9,8 @@
         "initializer_list": "cpp",
         "fishglshader.h": "c",
         "stdint.h": "c",
-        "random": "c"
+        "random": "c",
+        "fishglconfig.h": "c",
+        "fishgl.h": "c"
     }
 }

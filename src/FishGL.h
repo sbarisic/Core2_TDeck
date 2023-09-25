@@ -7,35 +7,34 @@ extern "C"
 
 #include <FishGLConfig.h>
 
-#define XElement 0
-#define YElement 1
-#define ZElement 2
-#define WElement 3
+	// #define XElement 0
+	// #define YElement 1
+	// #define ZElement 2
+	// #define WElement 3
 
+#define FGL_PACKED __attribute__((packed))
 #define FGL_DISCARD true
 #define FGL_KEEP false
 
-#define FGL_PACKED __attribute__((packed))
-
-#define COPY_VEC2(dst, src)            \
-	do                                 \
-	{                                  \
-		dst[XElement] = src[XElement]; \
-		dst[YElement] = src[YElement]; \
-	} while (0)
+	/*#define COPY_VEC2(dst, src)            \
+		do                                 \
+		{                                  \
+			dst[XElement] = src[XElement]; \
+			dst[YElement] = src[YElement]; \
+		} while (0)*/
 
 	typedef struct
 	{
 		float X;
 		float Y;
-	} fglVec2;
+	} FGL_PACKED fglVec2;
 
 	typedef struct
 	{
 		float X;
 		float Y;
 		float Z;
-	} fglVec3;
+	} FGL_PACKED fglVec3;
 
 	typedef struct
 	{
@@ -43,7 +42,22 @@ extern "C"
 		float Y;
 		float Z;
 		float W;
-	} fglVec4;
+	} FGL_PACKED fglVec4;
+
+	typedef struct
+	{
+		fglVec3 Row1;
+		fglVec3 Row2;
+		fglVec3 Row3;
+	} FGL_PACKED fglMat3;
+
+	typedef struct
+	{
+		fglVec4 Row1;
+		fglVec4 Row2;
+		fglVec4 Row3;
+		fglVec4 Row4;
+	} FGL_PACKED fglMat4;
 
 	typedef enum
 	{
@@ -58,16 +72,16 @@ extern "C"
 	{
 		struct
 		{
-			unsigned int R : 5;
-			unsigned int G : 6;
 			unsigned int B : 5;
+			unsigned int G : 6;
+			unsigned int R : 5;
 		} FGL_PACKED;
 
-		struct
+		/*struct
 		{
-			unsigned int u8_LO : 8;
 			unsigned int u8_HI : 8;
-		} FGL_PACKED;
+			unsigned int u8_LO : 8;
+		} FGL_PACKED;*/
 
 		unsigned short u16;
 	} FGL_PACKED FglColor;
@@ -124,7 +138,7 @@ extern "C"
 	} FglShaderType;
 
 	// These are not vec3 and vec2 because of padding
-	typedef union
+	/*typedef union
 	{
 		float Vec[3];
 	} FglVarying;
@@ -139,7 +153,7 @@ extern "C"
 			FglVarying B;
 			FglVarying C;
 		};
-	} FglVaryingIn;
+	} FglVaryingIn;*/
 
 	typedef struct
 	{
@@ -150,9 +164,9 @@ extern "C"
 		int32_t Stride;
 		PixelOrder Order;
 
-		mat4 MatProj;
-		mat4 MatView;
-		mat4 MatModel;
+		fglMat4 MatProj;
+		fglMat4 MatView;
+		fglMat4 MatModel;
 
 		FglBlendMode BlendMode;
 		FglTextureWrap TextureWrap;
@@ -160,8 +174,8 @@ extern "C"
 		FglColor BorderColor;
 		FglBuffer Textures[FGL_MAX_TEXTURES];
 
-		FglVaryingIn VarIn[FGL_VARYING_COUNT];
-		FglVarying VarOut[FGL_VARYING_COUNT];
+		// FglVaryingIn VarIn[FGL_VARYING_COUNT];
+		// FglVarying VarOut[FGL_VARYING_COUNT];
 
 		int32_t VertNum;
 		FglShaderType CurShader;
@@ -170,7 +184,7 @@ extern "C"
 		void *FragmentShader;
 	} FglState;
 
-	typedef bool (*FglVertexFunc)(FglState *State, fglVec3* Vert);
+	typedef bool (*FglVertexFunc)(FglState *State, fglVec3 *Vert);
 	typedef bool (*FglFragmentFunc)(FglState *State, fglVec2 UV, FglColor *OutColor);
 
 	// Basics
@@ -199,7 +213,23 @@ extern "C"
 	FGL_API void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
 
 	// Math
-	void fgl_Mul_4x4_4x1(const mat4 mat, const fglVec4 vec, fglVec4* res);
+	fglVec3 fgl_Vec3(float X, float Y, float Z);
+	fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z);
+
+	void fgl_Mul_4x4_4x1(fglMat4 *mat, const fglVec4 vec, fglVec4 *res);
+	void fgl_Mul_3x3_3x1(fglMat3 *mat, const fglVec3 vec, fglVec3 *res);
+	void fgl_Sub_3x1_3x1(const fglVec3 a, const fglVec3 b, fglVec3 *res);
+	void fgl_Transpose_3x3(fglMat3 *mat);
+	void fgl_Transpose_4x4(fglMat4 *mat);
+	void fgl_Identity_3x3(fglMat3 *mat);
+	void fgl_Identity_4x4(fglMat4 *mat);
+
+	fglMat4 fgl_Make_Translate_4x4(fglVec3 tran);
+	fglMat4 fgl_Translate(fglMat4 mat, fglVec3 tran);
+	fglMat4 fgl_Rotate(fglMat4 mat, float ang, fglVec3 tran);
+	fglMat4 fgl_Scale(fglMat4 mat, fglVec3 tran);
+
+	fglVec3 fgl_Cross3(fglVec3 a, fglVec3 b);
 
 #ifdef __cplusplus
 }
