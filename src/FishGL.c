@@ -31,8 +31,18 @@ void fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max)
 	Max->Y = fgl_fmaxf(fgl_fmaxf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
 }
 
+void fglBoundingRect2(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 *Min, fglVec2 *Max)
+{
+	Min->X = fgl_fminf(fgl_fminf(A.X, B.X), C.X);
+	Min->Y = fgl_fminf(fgl_fminf(A.Y, B.Y), C.Y);
+
+	Max->X = fgl_fmaxf(fgl_fmaxf(A.X, B.X), C.X);
+	Max->Y = fgl_fmaxf(fgl_fmaxf(A.Y, B.Y), C.Y);
+}
+
 bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, fglVec3 *Val)
 {
+
 	fglVec3 U;
 	fglVec3 a;
 	fglVec3 b;
@@ -45,7 +55,7 @@ bool fglBarycentric(FglTriangle3 *Tri, int32_t X, int32_t Y, fglVec3 *Val)
 	b.Y = (Tri->B.Y) - (Tri->A.Y);
 	b.Z = (Tri->A.Y) - (float)Y;
 
-	//glm_vec_cross((float *)&a, (float *)&b, (float *)&U);
+	// glm_vec_cross((float *)&a, (float *)&b, (float *)&U);
 	U = fgl_Cross3(a, b);
 
 	if (fabsf(U.Z) < 1)
@@ -304,7 +314,7 @@ void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *TriangleIn, FglTriangle
 	fglVec2 Min, Max;
 	fglVec3 UV;
 	FglColor OutClr;
-	fglBoundingRect(&Tri, &Min, &Max);
+	fglBoundingRect2(Tri.A, Tri.B, Tri.C, &Min, &Max);
 
 	FglFragmentFunc FragShader = (FglFragmentFunc)RenderState.FragmentShader;
 	RenderState.CurShader = FglShaderType_Fragment;

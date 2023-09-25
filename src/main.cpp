@@ -133,7 +133,7 @@ void draw_thread(void *args)
         ms_now = millis();
         frame_time = ms_now - ms;
         ms = ms_now;
-        rot_ms = ms;
+        // rot_ms = ms;
 
         if ((frame_counter++) % 10 == 0)
         {
