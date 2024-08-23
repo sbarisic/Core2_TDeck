@@ -15,7 +15,7 @@
 #define FUNC_NORETURN
 #else
 #define FUNC_PURE __attribute__((pure))
-#define FUNC_CONST __attribute__((const)) 
+#define FUNC_CONST __attribute__((const))
 #define FUNC_HOT __attribute__((hot))
 #define FUNC_NORETURN __attribute__((noreturn))
 #endif
@@ -165,21 +165,12 @@ extern "C"
     void core2_file_list(const char *dirname, onFileFoundFn onFileFound);
     bool core2_file_write_timesuffix(const char *filename, const char *data, size_t len);
 
-    // MCP320X ADC
+    // Keyboard
     // =================================================================================================
 
-    typedef enum
-    {
-        CORE2_ADC_CH1 = 1 << 0,
-        CORE2_ADC_CH2 = 1 << 1,
-    } core2_adc_channel_t;
-
-    bool core2_mcp320x_init();
-    bool core2_adc_lock();
-    void core2_adc_unlock(bool was_locked);
-    // void core2_adc_read(float *Volt1, float *Volt2);
-    void core2_adc_read_ex(float *VoltArray, float *Factors, core2_adc_channel_t Ch, bool UseLock);
-    void core2_adc_read(float *Volt1, float *Volt2);
+    void core2_keyboard_init();
+    int core2_keyboard_map_char(char c, int *out_x, int *out_y);
+    void core2_keyboard_update();
 
     // SPI
     // =================================================================================================
@@ -233,8 +224,14 @@ extern "C"
     void core2_st7789_test();
     uint16_t core2_rgb565(uint8_t r, uint8_t g, uint8_t b);
     void core2_rgb565_deconstr(uint16_t clr, uint8_t *r, uint8_t *g, uint8_t *b);
-    void core2_st7789_draw_fb(uint16_t *colors, FglState* Fgl);
+    void core2_st7789_draw_fb(uint16_t *colors, FglState *Fgl);
     // void core2_st7789_draw_fb_scanline(uint16_t *colors, int y);
+
+    void blit_write(const char *str, int len);
+
+    fglVec2i core2_get_cursor();
+    void core2_touch_init();
+    void core2_touch_update();
 
 #ifdef __cplusplus
 }

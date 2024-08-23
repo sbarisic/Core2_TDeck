@@ -9,6 +9,8 @@
 #pragma once
 
 
+#define WIDTH 320
+#define HEIGHT 240
 
 //! The board peripheral power control pin needs to be set to HIGH when using the peripheral
 #define BOARD_POWERON       10

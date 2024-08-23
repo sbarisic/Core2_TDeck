@@ -5,7 +5,7 @@
 #include <stdbool.h>
 //#include <cglm/cglm.h>
 
-#define FGL_MAX_TEXTURES 8
+#define FGL_MAX_TEXTURES 4
 // #define FGL_VARYING_COUNT 3 // Must be more or equal to 1
 
 #define FGL_API

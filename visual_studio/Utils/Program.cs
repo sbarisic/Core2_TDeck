@@ -22,9 +22,9 @@ namespace Dashboard {
 			SW.Write(string.Format(Fmt, Args));
 		}
 
+
 		static void Main(string[] args) {
-			ObjLoader.Load("data/models/box.obj", out Vector3[] VertsArr, out Vector2[] UVsArr);
-			Image<Rgba32> Img = SixLabors.ImageSharp.Image.Load<Rgba32>("data/models/fish_texture.png");
+			ObjLoader.Load("data/models/fish.obj", out Vector3[] VertsArr, out Vector2[] UVsArr);
 			Console.WriteLine("Verts: {0}, UVs: {1}", VertsArr.Length, UVsArr.Length);
 
 			FS = File.OpenWrite("out.h");
@@ -87,7 +87,12 @@ namespace Dashboard {
 			WriteLine("};");
 			WriteLine("");
 
-			WriteLine("static const uint8_t model_obj_tex[] PROGMEM = {");
+			Image<Rgba32> Img = SixLabors.ImageSharp.Image.Load<Rgba32>("data/fonts/mono10.png");
+
+			WriteLine("static const int font_tex_width = {0};", Img.Width);
+			WriteLine("static const int font_tex_height = {0};", Img.Height);
+
+			WriteLine("static const uint8_t font_tex[] PROGMEM = {");
 			Write("    ");
 
 			for (int y = 0; y < Img.Height; y++) {
