@@ -87,7 +87,8 @@ void fgl_init(int W, int H, int BPP)
     fglClearBuffer(&ColorBuffer, fglColor(255, 0, 0));
     core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, (FglState *)NULL);
 
-    DepthBuffer = fglCreateBuffer(core2_malloc(W * H), W, H);
+    DepthBuffer = fglCreateDepthBuffer(core2_malloc(W * H), W, H);
+    fglBindDepthBuffer(&DepthBuffer);
 
     FglColor *Buff1 = (FglColor *)core2_malloc(sizeof(FglColor) * W * H);
     for (size_t y = 0; y < H; y++)
@@ -159,8 +160,8 @@ FUNC_NORETURN void gpu_main(void *args)
 
     float xoffset = 0;
 
-    fglMat4 pos1 = fgl_Make_Translate_4x4(fgl_Vec3(100, 100, 0));
-    fglMat4 pos2 = fgl_Make_Translate_4x4(fgl_Vec3(200, 120, 0));
+    fglMat4 pos1 = fgl_Make_Translate_4x4(fgl_Vec3(100, 100, 20));
+    fglMat4 pos2 = fgl_Make_Translate_4x4(fgl_Vec3(200, 120, 10));
     fglVec3 unitZ = fgl_Vec3(0, 0, 1);
 
     float Scal1 = 70.0f;
@@ -176,6 +177,7 @@ FUNC_NORETURN void gpu_main(void *args)
 
         fglBeginFrame();
         fglClearBuffer(&ColorBuffer, fglColor(0, 0, 0));
+        fglClearDepthBuffer();
 
         fgl->MatModel = pos1;
         fgl_Rotate(&fgl->MatModel, rot_ang_1, unitZ);

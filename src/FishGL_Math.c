@@ -3,18 +3,6 @@
 #include <cglm/cglm.h>
 #include <esp_dsp.h>
 
-#if 1
-#define FUNC_PURE
-#define FUNC_CONST
-#define FUNC_HOT
-#define FUNC_NORETURN
-#else
-#define FUNC_PURE __attribute__((pure))
-#define FUNC_CONST __attribute__((const)) 
-#define FUNC_HOT __attribute__((hot))
-#define FUNC_NORETURN __attribute__((noreturn))
-#endif
-
 #define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
 #define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
 
@@ -101,6 +89,10 @@ FUNC_CONST fglVec3 fgl_Vec3(float X, float Y, float Z)
     v.Y = Y;
     v.Z = Z;
     return v;
+}
+
+FUNC_CONST float fgl_Vec3_Vary(float A, float B, float C, fglVec3 Bary) {
+	return (A * Bary.X) + (B * Bary.Y) + (C * Bary.Z);
 }
 
 FUNC_CONST fglVec3 fgl_Vec3_Scale(fglVec3 Vec, float Scale) {

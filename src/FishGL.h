@@ -1,5 +1,17 @@
 #pragma once
 
+#if 0
+#define FUNC_PURE
+#define FUNC_CONST
+#define FUNC_HOT
+#define FUNC_NORETURN
+#else
+#define FUNC_PURE __attribute__((pure))
+#define FUNC_CONST __attribute__((const)) 
+#define FUNC_HOT __attribute__((hot))
+#define FUNC_NORETURN __attribute__((noreturn))
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -163,6 +175,10 @@ extern "C"
 
         fglBBox RenderBounds;
         fglBBox LastRenderBounds;
+
+        FglBuffer* DepthBuffer;
+
+        int EnableBackfaceCulling;
     } FglState;
 
     typedef bool (*FglVertexFunc)(FglState *State, fglVec3 *Vert);
@@ -186,11 +202,15 @@ extern "C"
 
     // Buffer functions and textures
     FGL_API FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height);
+    FGL_API FglBuffer fglCreateDepthBuffer(void *Memory, int32_t Width, int32_t Height);
     FGL_API FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len);
     FGL_API void fglDisplayToFramebuffer(FglBuffer *Buffer);
     FGL_API void fglClearBuffer(FglBuffer *Buffer, FglColor Clr);
     FGL_API void fglClearBufferRect(FglBuffer *Buffer, FglColor Clr, fglBBox Rect);
     FGL_API void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot);
+
+    FGL_API void fglBindDepthBuffer(FglBuffer* Buffer);
+    FGL_API void fglClearDepthBuffer();
 
     // Drawing
     FGL_API void fglDrawLine(FglBuffer *Buffer, FglColor Color, int32_t X0, int32_t Y0, int32_t X1, int32_t Y1);
@@ -205,6 +225,7 @@ extern "C"
     fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z);
     fglVec2i fgl_Vec2i(int16_t X, int16_t Y);
 
+    float fgl_Vec3_Vary(float A, float B, float C, fglVec3 Bary);
     fglVec3 fgl_Vec3_Scale(fglVec3 Vec, float Scale);
     float fgl_Vec3_Length(fglVec3 a);
     fglVec3 fgl_Vec3_Sub(fglVec3 a, fglVec3 b);

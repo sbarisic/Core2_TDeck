@@ -8,7 +8,7 @@
 #include "core2_tdeck.h"
 #include <FishGL.h>
 
-#if 1
+#if 0
 #define FUNC_PURE
 #define FUNC_CONST
 #define FUNC_HOT

@@ -6,18 +6,6 @@
 #include <byteswap.h>
 #include <esp_dsp.h>
 
-#if 1
-#define FUNC_PURE
-#define FUNC_CONST
-#define FUNC_HOT
-#define FUNC_NORETURN
-#else
-#define FUNC_PURE __attribute__((pure))
-#define FUNC_CONST __attribute__((const)) 
-#define FUNC_HOT __attribute__((hot))
-#define FUNC_NORETURN __attribute__((noreturn))
-#endif
-
 // Core2
 void core2_st7789_draw_fb_scanline(FglColor *colors, int y);
 void core2_st7789_draw_fb_pixel(uint16_t color, int x, int y);
@@ -106,6 +94,9 @@ void fglInit(void *VideoMemory, int32_t Width, int32_t Height, int32_t BPP, int3
     RenderState.TextureWrap = FglTextureWrap_BorderColor;
     RenderState.BlendMode = FglBlendMode_None;
 
+    RenderState.EnableBackfaceCulling = 0;
+    RenderState.DepthBuffer = NULL;
+
     fgl_Identity_4x4(&RenderState.MatModel);
     fgl_Identity_4x4(&RenderState.MatView);
     fgl_Identity_4x4(&RenderState.MatProj);
@@ -154,6 +145,17 @@ FglBuffer fglCreateBuffer(void *Memory, int32_t Width, int32_t Height)
     FglBuffer Buffer;
     Buffer.Memory = Memory;
     Buffer.Length = Width * Height * sizeof(FglColor);
+    Buffer.PixelCount = Width * Height;
+    Buffer.Width = Width;
+    Buffer.Height = Height;
+    return Buffer;
+}
+
+FglBuffer fglCreateDepthBuffer(void *Memory, int32_t Width, int32_t Height)
+{
+    FglBuffer Buffer;
+    Buffer.Memory = Memory;
+    Buffer.Length = Width * Height * sizeof(uint8_t);
     Buffer.PixelCount = Width * Height;
     Buffer.Width = Width;
     Buffer.Height = Height;
@@ -214,6 +216,17 @@ void fglDisplayToFramebuffer(FglBuffer *Buffer)
 void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot)
 {
     RenderState.Textures[Slot] = *TextureBuffer;
+}
+
+void fglBindDepthBuffer(FglBuffer* Buffer){
+    RenderState.DepthBuffer = Buffer;
+}
+
+void fglClearDepthBuffer() {
+    if (RenderState.DepthBuffer != NULL)
+    {
+        memset(RenderState.DepthBuffer->Memory, 0, RenderState.DepthBuffer->Length);
+    }
 }
 
 // Drawing
@@ -312,6 +325,8 @@ static FUNC_HOT int _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, 
     fglVec3 UV;
     FglColor OutClr;
 
+    uint8_t* DepthBufferMem = NULL;
+
     FglVertexFunc VertShader = (FglVertexFunc)RenderState.VertexShader;
     RenderState.CurShader = FglShaderType_Vertex;
 
@@ -328,12 +343,16 @@ static FUNC_HOT int _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, 
         return 0;
 
 // Backface culling
-    if (1) {
+    if (RenderState.EnableBackfaceCulling) {
         fglVec3 Cross = fgl_Vec3_Normalize(fgl_Cross3(fgl_Vec3_Sub(C, A), fgl_Vec3_Sub(B, A)));
 
         if (Cross.Z > 0)
             return 0;
 	}
+
+    if (RenderState.DepthBuffer) {
+        DepthBufferMem = (uint8_t*)RenderState.DepthBuffer->Memory;
+    }
 
     fglBoundingRect3(A, B, C, &Min, &Max);
 
@@ -365,8 +384,24 @@ static FUNC_HOT int _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, 
                 dspm_mult_3x3x1_f32_ae32((const float *)&Mat, (const float *)&Barycentric,
                                          (float *)&UV); // fgl_Mul_3x3_3x1
 
-                if (FragShader(&RenderState, fgl_Vec2(UV.X, UV.Y), &Buffer->Pixels[y * Buffer->Width + x]) == FGL_DISCARD)
+                int PixelIndex = y * Buffer->Width + x;
+                uint8_t Depth = 0;
+
+                if (DepthBufferMem != NULL) {
+                    float D = fgl_Vec3_Vary(A.Z, B.Z, C.Z, Barycentric);
+                    Depth = (uint8_t)(D * 255);
+
+                    if (DepthBufferMem[PixelIndex] > Depth)
+                        continue;
+                }
+
+  
+                if (FragShader(&RenderState, fgl_Vec2(UV.X, UV.Y), &Buffer->Pixels[PixelIndex]) == FGL_DISCARD)
                     continue;
+
+                if (DepthBufferMem != NULL) {
+                    DepthBufferMem[PixelIndex] = Depth;
+                }
 
                 //_fglBlend(OutClr, &Buffer->Pixels[y * Buffer->Width + x]);
             }
