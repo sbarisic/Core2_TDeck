@@ -82,6 +82,12 @@ bool st7789_spi_write_byte(const uint8_t *Data, size_t DataLength)
     t.tx_buffer = Data;
 
     esp_err_t ret = spi_device_transmit(ST7789_Dev, &t);
+
+    if (ret != ESP_OK)
+    {
+        dprintf("st7789_spi_write_byte(%p, %ld)\n", Data, DataLength);
+    }
+
     assert(ret == ESP_OK);
     return true;
 
@@ -179,7 +185,7 @@ extern "C" void core2_st7789_draw_fb_scanline(uint16_t *colors, int y)
     st7789_spi_end();
 }
 
-void core2_st7789_draw_fb(uint16_t *colors, fglBBox Bounds, fglBBox LastBounds)
+void core2_st7789_draw_fb(uint16_t *colors, FglState *Fgl)
 {
     const int lines_to_send = 6;
     st7789_spi_begin();
@@ -187,12 +193,27 @@ void core2_st7789_draw_fb(uint16_t *colors, fglBBox Bounds, fglBBox LastBounds)
     WORD_ALIGNED_ATTR uint16_t draw_width = 0;
     WORD_ALIGNED_ATTR uint16_t draw_height = 0;
 
-    Bounds = fgl_BBox_FromTwo(Bounds, LastBounds);
+    fglBBox Bounds = fgl_BBox(0, 0, 0, 0);
+
+    if (Fgl != NULL)
+        Bounds = fgl_BBox_FromTwo(Fgl->RenderBounds, Fgl->LastRenderBounds);
 
     uint16_t StartX = Bounds.Min.X;
     uint16_t StartY = Bounds.Min.Y;
     uint16_t EndX = Bounds.Max.X;
     uint16_t EndY = Bounds.Max.Y;
+
+    if (StartX < 0)
+        StartX = 0;
+
+    if (StartY < 0)
+        StartY = 0;
+
+    if (EndX >= WIDTH)
+        EndX = WIDTH - 1;
+
+    if (EndY >= HEIGHT)
+        EndY = HEIGHT - 1;
 
     /*uint16_t LStartX = LastBounds.Min.X;
     uint16_t LStartY = LastBounds.Min.Y;
@@ -241,6 +262,7 @@ void core2_st7789_draw_fb(uint16_t *colors, fglBBox Bounds, fglBBox LastBounds)
             draw_width, draw_height);*/
 
     for (size_t y = 0; y < draw_height; y++)
+    // for (int y = draw_height - 1; y >= 0; y--)
     {
         st7789_spi_write_byte((uint8_t *)(colors + ((y + StartY) * WIDTH + StartX)), draw_width * sizeof(uint16_t));
     }
@@ -339,7 +361,7 @@ void core2_st7789_test()
             }
         }
 
-        core2_st7789_draw_fb(fb1, fgl_BBox(0, 0, 0, 0), fgl_BBox(0, 0, 0, 0));
+        core2_st7789_draw_fb(fb1, NULL);
 
         // vTaskDelay(pdMS_TO_TICKS(1));
         ms = millis();

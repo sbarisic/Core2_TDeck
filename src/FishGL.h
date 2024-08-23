@@ -160,6 +160,9 @@ extern "C"
 
         void *VertexShader;
         void *FragmentShader;
+
+        fglBBox RenderBounds;
+        fglBBox LastRenderBounds;
     } FglState;
 
     typedef bool (*FglVertexFunc)(FglState *State, fglVec3 *Vert);
@@ -203,6 +206,9 @@ extern "C"
     fglVec2i fgl_Vec2i(int16_t X, int16_t Y);
 
     fglVec3 fgl_Vec3_Scale(fglVec3 Vec, float Scale);
+    float fgl_Vec3_Length(fglVec3 a);
+    fglVec3 fgl_Vec3_Sub(fglVec3 a, fglVec3 b);
+    fglVec3 fgl_Vec3_Normalize(fglVec3 a);
 
     fglBBox fgl_BBox(float XMin, float YMin, float XMax, float YMax);
     fglBBox fgl_BBox_FromTwo(fglBBox A, fglBBox B);

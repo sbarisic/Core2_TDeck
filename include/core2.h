@@ -8,6 +8,18 @@
 #include "core2_tdeck.h"
 #include <FishGL.h>
 
+#if 1
+#define FUNC_PURE
+#define FUNC_CONST
+#define FUNC_HOT
+#define FUNC_NORETURN
+#else
+#define FUNC_PURE __attribute__((pure))
+#define FUNC_CONST __attribute__((const)) 
+#define FUNC_HOT __attribute__((hot))
+#define FUNC_NORETURN __attribute__((noreturn))
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -221,7 +233,7 @@ extern "C"
     void core2_st7789_test();
     uint16_t core2_rgb565(uint8_t r, uint8_t g, uint8_t b);
     void core2_rgb565_deconstr(uint16_t clr, uint8_t *r, uint8_t *g, uint8_t *b);
-    void core2_st7789_draw_fb(uint16_t *colors, fglBBox Bounds, fglBBox LastBounds);
+    void core2_st7789_draw_fb(uint16_t *colors, FglState* Fgl);
     // void core2_st7789_draw_fb_scanline(uint16_t *colors, int y);
 
 #ifdef __cplusplus

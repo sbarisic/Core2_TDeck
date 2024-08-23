@@ -3,10 +3,22 @@
 #include <cglm/cglm.h>
 #include <esp_dsp.h>
 
+#if 1
+#define FUNC_PURE
+#define FUNC_CONST
+#define FUNC_HOT
+#define FUNC_NORETURN
+#else
+#define FUNC_PURE __attribute__((pure))
+#define FUNC_CONST __attribute__((const)) 
+#define FUNC_HOT __attribute__((hot))
+#define FUNC_NORETURN __attribute__((noreturn))
+#endif
+
 #define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
 #define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
 
-fglBBox fgl_BBox(float XMin, float YMin, float XMax, float YMax) {
+FUNC_CONST fglBBox fgl_BBox(float XMin, float YMin, float XMax, float YMax) {
     fglBBox BBox;
     BBox.Min.X = XMin;
     BBox.Min.Y = YMin;
@@ -15,7 +27,7 @@ fglBBox fgl_BBox(float XMin, float YMin, float XMax, float YMax) {
     return BBox;
 }
 
-fglBBox fgl_BBox_FromTwo(fglBBox A, fglBBox B) {
+FUNC_CONST fglBBox fgl_BBox_FromTwo(fglBBox A, fglBBox B) {
     fglBBox BBox;
 
     BBox.Min.X = fgl_fminf(A.Min.X, B.Min.X);
@@ -26,7 +38,7 @@ fglBBox fgl_BBox_FromTwo(fglBBox A, fglBBox B) {
     return BBox;
 }
 
-fglVec2 fgl_Vec2(float X, float Y)
+FUNC_CONST fglVec2 fgl_Vec2(float X, float Y)
 {
     fglVec2 v;
     v.X = X;
@@ -34,7 +46,7 @@ fglVec2 fgl_Vec2(float X, float Y)
     return v;
 }
 
-fglVec2 fgl_Vec2_Min(fglVec2 A, fglVec2 B)
+FUNC_CONST fglVec2 fgl_Vec2_Min(fglVec2 A, fglVec2 B)
 {
     fglVec2 Min;
 
@@ -44,7 +56,7 @@ fglVec2 fgl_Vec2_Min(fglVec2 A, fglVec2 B)
     return Min;
 }
 
-fglVec2 fgl_Vec2_Max(fglVec2 A, fglVec2 B)
+FUNC_CONST fglVec2 fgl_Vec2_Max(fglVec2 A, fglVec2 B)
 {
     fglVec2 Max;
 
@@ -54,7 +66,7 @@ fglVec2 fgl_Vec2_Max(fglVec2 A, fglVec2 B)
     return Max;
 }
 
-fglVec2i fgl_Vec2i(int16_t X, int16_t Y)
+FUNC_CONST fglVec2i fgl_Vec2i(int16_t X, int16_t Y)
 {
     fglVec2i v;
     v.X = X;
@@ -62,7 +74,7 @@ fglVec2i fgl_Vec2i(int16_t X, int16_t Y)
     return v;
 }
 
-fglVec2i fgl_Vec2i_Min(fglVec2i A, fglVec2i B)
+FUNC_CONST fglVec2i fgl_Vec2i_Min(fglVec2i A, fglVec2i B)
 {
     fglVec2i Min;
 
@@ -72,7 +84,7 @@ fglVec2i fgl_Vec2i_Min(fglVec2i A, fglVec2i B)
     return Min;
 }
 
-fglVec2i fgl_Vec2i_Max(fglVec2i A, fglVec2i B)
+FUNC_CONST fglVec2i fgl_Vec2i_Max(fglVec2i A, fglVec2i B)
 {
     fglVec2i Max;
 
@@ -82,7 +94,7 @@ fglVec2i fgl_Vec2i_Max(fglVec2i A, fglVec2i B)
     return Max;
 }
 
-fglVec3 fgl_Vec3(float X, float Y, float Z)
+FUNC_CONST fglVec3 fgl_Vec3(float X, float Y, float Z)
 {
     fglVec3 v;
     v.X = X;
@@ -91,14 +103,14 @@ fglVec3 fgl_Vec3(float X, float Y, float Z)
     return v;
 }
 
-fglVec3 fgl_Vec3_Scale(fglVec3 Vec, float Scale) {
+FUNC_CONST fglVec3 fgl_Vec3_Scale(fglVec3 Vec, float Scale) {
     Vec.X = Vec.X * Scale;
     Vec.Y = Vec.Y * Scale;
     Vec.Z = Vec.Z * Scale;
     return Vec;
 }
 
-fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z)
+FUNC_CONST fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z)
 {
     fglVec3 v;
     v.X = V2.X;
@@ -142,7 +154,7 @@ void fgl_Identity_4x4(fglMat4 *mat)
     glm_mat4_identity((vec4 *)mat);
 }
 
-fglMat4 fgl_Make_Translate_4x4(fglVec3 tran)
+FUNC_CONST fglMat4 fgl_Make_Translate_4x4(fglVec3 tran)
 {
     fglMat4 transMat;
     glm_translate_make((vec4 *)&transMat, (float *)&tran);
@@ -164,7 +176,30 @@ void fgl_Scale(fglMat4 *mat, fglVec3 tran)
     glm_scale((vec4 *)mat, (float *)&tran);
 }
 
-fglVec3 fgl_Cross3(fglVec3 a, fglVec3 b)
+FUNC_CONST fglVec3 fgl_Vec3_Sub(fglVec3 a, fglVec3 b) {
+    fglVec3 v;
+    v.X = a.X - b.X;
+    v.Y = a.Y - b.Y;
+    v.Z = a.Z - b.Z;
+    return v;
+}
+
+FUNC_CONST float fgl_Vec3_Length(fglVec3 a) {
+    return sqrtf(a.X * a.X + a.Y * a.Y + a.Z * a.Z);
+}
+
+FUNC_CONST fglVec3 fgl_Vec3_Normalize(fglVec3 a) {
+    float len = fgl_Vec3_Length(a);
+
+    fglVec3 v;
+    v.X = a.X / len;
+    v.Y = a.Y / len;
+    v.Z = a.Z / len;
+
+    return v;
+}
+
+FUNC_CONST fglVec3 fgl_Cross3(fglVec3 a, fglVec3 b)
 {
     fglVec3 res;
     res.X = a.Y * b.Z - a.Z * b.Y;
@@ -177,7 +212,7 @@ fglVec3 fgl_Cross3(fglVec3 a, fglVec3 b)
     // return c;
 }
 
-FglColor fglColor(uint8_t r, uint8_t g, uint8_t b)
+FUNC_CONST FglColor fglColor(uint8_t r, uint8_t g, uint8_t b)
 {
     // FglColor clr = {.R = r >> 3, .G = g >> 2, .B = b >> 3};
     FglColor clr;

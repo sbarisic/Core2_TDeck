@@ -21,19 +21,20 @@
 static int Width;
 static int Height;
 
-static FglBuffer DrawMask = {0};
+
 static FglBuffer ColorBuffer = {0};
+static FglBuffer DepthBuffer = {0};
 static FglBuffer TestTex = {0};
 
 // #define TRI_COUNT 2
 // FglTriangle3 Tri[TRI_COUNT];
 // FglTriangle2 UV[TRI_COUNT];
 
-size_t vert_count;
+size_t vert_count = 0;
 fglVec3 *verts;
 fglVec2 *uvs;
 
-bool VertexShader(FglState *State, fglVec3 *Vert)
+FUNC_HOT bool VertexShader(FglState *State, fglVec3 *Vert)
 {
     // mat4 res;
     // glm_mat4_copy(State->MatModel, res);
@@ -48,13 +49,31 @@ bool VertexShader(FglState *State, fglVec3 *Vert)
     return FGL_KEEP;
 }
 
-bool FragmentShader(FglState *State, fglVec2 UV, FglColor *OutColor)
+FUNC_HOT bool FragmentShader(FglState *State, fglVec2 UV, FglColor *OutColor)
 {
-    /*if (UV.X < 0 || UV.Y < 0 || UV.X > 1 || UV.Y > 1)
-        return FGL_DISCARD;*/
-
     *OutColor = fglShaderSampleTextureUV(&State->Textures[0], UV);
     return FGL_KEEP;
+}
+
+void load_fish_model()
+{
+    vert_count = sizeof(model_verts_obj) / sizeof(*model_verts_obj) / 3;
+    verts = (fglVec3 *)core2_malloc(vert_count * sizeof(fglVec3));
+    uvs = (fglVec2 *)core2_malloc(vert_count * sizeof(fglVec2));
+
+    for (size_t i = 0; i < vert_count; i++)
+    {
+        verts[i].X = model_verts_obj[i * 3 + 0];
+        verts[i].Y = model_verts_obj[i * 3 + 1];
+        verts[i].Z = model_verts_obj[i * 3 + 2];
+
+        uvs[i].X = model_verts_obj[i * 2 + 0];
+        uvs[i].Y = model_verts_obj[i * 2 + 1];
+    }
+}
+
+void load_rectangles_model()
+{
 }
 
 void fgl_init(int W, int H, int BPP)
@@ -64,13 +83,13 @@ void fgl_init(int W, int H, int BPP)
 
     fglInit(NULL, W, H, BPP, 0, PixelOrder_RGB_565);
 
-    DrawMask = fglCreateBuffer(malloc(W * H * sizeof(FglColor)), W, H);
-
-    ColorBuffer = fglCreateBuffer(malloc(W * H * sizeof(FglColor)), W, H);
+    ColorBuffer = fglCreateBuffer(core2_malloc(W * H * sizeof(FglColor)), W, H);
     fglClearBuffer(&ColorBuffer, fglColor(255, 0, 0));
-    core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, fgl_BBox(0, 0, 0, 0), fgl_BBox(0, 0, 0, 0));
+    core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, (FglState *)NULL);
 
-    FglColor *Buff1 = (FglColor *)malloc(sizeof(FglColor) * W * H);
+    DepthBuffer = fglCreateBuffer(core2_malloc(W * H), W, H);
+
+    FglColor *Buff1 = (FglColor *)core2_malloc(sizeof(FglColor) * W * H);
     for (size_t y = 0; y < H; y++)
     {
         for (size_t x = 0; x < W; x++)
@@ -91,10 +110,12 @@ void fgl_init(int W, int H, int BPP)
     fglBindShader((void *)&VertexShader, FglShaderType_Vertex);
     fglBindShader((void *)&FragmentShader, FglShaderType_Fragment);
 
-    float X = -50;
-    float Y = -50;
-    float SX = 100;
-    float SY = 100;
+    float X = -1;
+    float Y = -1;
+    float SX = 2;
+    float SY = 2;
+
+    // load_fish_model();
 
     vert_count = 6;
     verts = (fglVec3 *)malloc(vert_count * sizeof(fglVec3));
@@ -121,7 +142,7 @@ void fgl_init(int W, int H, int BPP)
     UV[1] = (FglTriangle2){{1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};*/
 }
 
-void gpu_main(void *args)
+FUNC_NORETURN void gpu_main(void *args)
 {
     core2_st7789_init();
 
@@ -141,15 +162,15 @@ void gpu_main(void *args)
     fglMat4 pos1 = fgl_Make_Translate_4x4(fgl_Vec3(100, 100, 0));
     fglMat4 pos2 = fgl_Make_Translate_4x4(fgl_Vec3(200, 120, 0));
     fglVec3 unitZ = fgl_Vec3(0, 0, 1);
-    fglVec3 scaleVec = fgl_Vec3(1.5f, 1.5f, 1.0f);
 
-    fglBBox RenderBounds;
-    fglBBox LastRenderBounds = fgl_BBox(0, 0, 0, 0);
+    float Scal1 = 70.0f;
+    fglVec3 scaleVec1 = fgl_Vec3(Scal1, Scal1, 1.0f);
+
+    float Scal2 = 100.0f;
+    fglVec3 scaleVec2 = fgl_Vec3(Scal2, Scal2, 1.0f);
 
     for (;;)
     {
-        RenderBounds = fgl_BBox(WIDTH, HEIGHT, 0, 0);
-
         float rot_ang_1 = sinf(rot_ms / 1000.0f);
         float rot_ang_2 = cosf(rot_ms / 1000.0f) * 0.95f;
 
@@ -158,16 +179,20 @@ void gpu_main(void *args)
 
         fgl->MatModel = pos1;
         fgl_Rotate(&fgl->MatModel, rot_ang_1, unitZ);
+        fgl_Scale(&fgl->MatModel, scaleVec1);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &RenderBounds);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &fgl->RenderBounds);
 
         fgl->MatModel = pos2;
         fgl_Rotate(&fgl->MatModel, rot_ang_2, unitZ);
-        fgl_Scale(&fgl->MatModel, scaleVec);
+        fgl_Scale(&fgl->MatModel, scaleVec2);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &RenderBounds);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &fgl->RenderBounds);
+
+        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, NULL);
+        fglEndFrame();
 
         ms_now = millis();
         frame_time = ms_now - ms;
@@ -178,18 +203,11 @@ void gpu_main(void *args)
         {
             dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
         }
-
-        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, RenderBounds, LastRenderBounds);
-        LastRenderBounds = RenderBounds;
-        // core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, WIDTH / 2, HEIGHT);
-
-        fglEndFrame();
-
         // vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
-void update_main(void *args)
+FUNC_NORETURN void update_main(void *args)
 {
     int64_t last_time = 0;
     float target_fps = 60;
