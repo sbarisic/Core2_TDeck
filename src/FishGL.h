@@ -183,7 +183,7 @@ extern "C"
     FGL_API void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
     // FGL_API void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
     FGL_API void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
-    void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len);
+    void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len, fglVec2 *Min, fglVec2 *Max);
 
     // Math
     fglVec2 fgl_Vec2(float X, float Y);

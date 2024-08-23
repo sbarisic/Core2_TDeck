@@ -135,6 +135,7 @@ bool st7789_write_addr(uint16_t addr1, uint16_t addr2)
 
     Byte[0] = (addr1 >> 8) & 0xFF;
     Byte[1] = addr1 & 0xFF;
+
     Byte[2] = (addr2 >> 8) & 0xFF;
     Byte[3] = addr2 & 0xFF;
 
@@ -181,32 +182,49 @@ extern "C" void core2_st7789_draw_fb_scanline(uint16_t *colors, int y)
 void core2_st7789_draw_fb(uint16_t *colors, uint16_t StartX, uint16_t StartY, uint16_t EndX, uint16_t EndY)
 {
     const int lines_to_send = 6;
-
     st7789_spi_begin();
 
-    st7789_write_cmd_u8(ST7789_CASET);
+    WORD_ALIGNED_ATTR uint16_t draw_width = 0;
+    WORD_ALIGNED_ATTR uint16_t draw_height = 0;
 
-    if (StartX == 0 && EndX == 0)
+    if (StartX == 0 && EndX == 0 && StartY == 0 && EndY == 0)
+    {
+        st7789_write_cmd_u8(ST7789_CASET);
         st7789_write_addr(0, WIDTH);
-    else
-        st7789_write_addr(StartX, EndX);
+        draw_width = WIDTH;
 
-    st7789_write_cmd_u8(ST7789_RASET);
-
-    if (StartY == 0 && EndY == 0)
+        st7789_write_cmd_u8(ST7789_RASET);
         st7789_write_addr(0, HEIGHT);
+        draw_height = HEIGHT;
+    }
     else
+    {
+        st7789_write_cmd_u8(ST7789_CASET);
+        st7789_write_addr(StartX, EndX);
+        draw_width = (EndX - StartX) + 1;
+
+        st7789_write_cmd_u8(ST7789_RASET);
         st7789_write_addr(StartY, EndY);
+        draw_height = (EndY - StartY) + 1;
+    }
 
     st7789_write_cmd_u8(ST7789_RAMWR);
     gpio_set_level(ST7789_DC, SPI_Data_Mode);
 
-    for (size_t y = 0; y < HEIGHT / lines_to_send; y++)
+    /*for (size_t y = 0; y < HEIGHT / lines_to_send; y++)
     {
         st7789_spi_write_byte((uint8_t *)(colors + y * WIDTH * lines_to_send),
                               lines_to_send * WIDTH * sizeof(uint16_t));
         // st7789_spi_queue_byte((uint8_t *)(colors + y * WIDTH * lines_to_send), lines_to_send * WIDTH *
         // sizeof(uint16_t));
+    }*/
+
+    dprintf("StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", StartX, StartY, EndX, EndY,
+            draw_width, draw_height);
+
+    for (size_t y = StartY; y < draw_height; y++)
+    {
+        st7789_spi_write_byte((uint8_t *)(colors + (y * WIDTH + StartX)), draw_width * sizeof(uint16_t));
     }
 
     // st7789_write_cmd_u8(ST7789_NOP);

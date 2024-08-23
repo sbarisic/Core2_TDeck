@@ -3,6 +3,9 @@
 #include <cglm/cglm.h>
 #include <esp_dsp.h>
 
+#define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
+#define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
+
 fglVec2 fgl_Vec2(float X, float Y)
 {
     fglVec2 v;
@@ -15,15 +18,8 @@ fglVec2 fgl_Vec2_Min(fglVec2 A, fglVec2 B)
 {
     fglVec2 Min;
 
-    if (A.X < B.X)
-        Min.X = A.X;
-    else
-        Min.X = B.Y;
-
-    if (A.Y < B.Y)
-        Min.Y = A.Y;
-    else
-        Min.Y = B.Y;
+    Min.X = fgl_fminf(A.X, B.X);
+    Min.Y = fgl_fminf(A.Y, B.Y);
 
     return Min;
 }
@@ -32,15 +28,8 @@ fglVec2 fgl_Vec2_Max(fglVec2 A, fglVec2 B)
 {
     fglVec2 Max;
 
-    if (A.X > B.X)
-        Max.X = A.X;
-    else
-        Max.X = B.Y;
-
-    if (A.Y > B.Y)
-        Max.Y = A.Y;
-    else
-        Max.Y = B.Y;
+    Max.X = fgl_fmaxf(A.X, B.X);
+    Max.Y = fgl_fmaxf(A.Y, B.Y);
 
     return Max;
 }

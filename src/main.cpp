@@ -38,7 +38,7 @@ bool VertexShader(FglState *State, fglVec3 *Vert)
     // mat4 res;
     // glm_mat4_copy(State->MatModel, res);
 
-    fglVec4 v1 = {.X = Vert->X, .Y = Vert->Y, .Z = Vert->Z, .W = 1};
+    WORD_ALIGNED_ATTR fglVec4 v1 = {.X = Vert->X, .Y = Vert->Y, .Z = Vert->Z, .W = 1};
     // glm_mat4_mulv(res, v1, v1);
 
     fgl_Mul_4x4_4x1(&State->MatModel, v1, &v1);
@@ -147,8 +147,14 @@ void gpu_main(void *args)
     float rot_ang_1 = sinf(rot_ms / 1000.0f);
     float rot_ang_2 = cosf(rot_ms / 1000.0f) * 0.95f;
 
+    fglVec2 Min;
+    fglVec2 Max;
+
     for (;;)
     {
+        Min = fgl_Vec2(WIDTH, 0);
+        Max = fgl_Vec2(0, 0);
+
         fglBeginFrame();
         fglClearBuffer(&ColorBuffer, fglColor(0, 0, 0));
 
@@ -156,27 +162,31 @@ void gpu_main(void *args)
         fgl_Rotate(&fgl->MatModel, rot_ang_1, unitZ);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &Min, &Max);
 
         fgl->MatModel = pos2;
         fgl_Rotate(&fgl->MatModel, rot_ang_2, unitZ);
         fgl_Scale(&fgl->MatModel, scaleVec);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &Min, &Max);
 
         ms_now = millis();
         frame_time = ms_now - ms;
         ms = ms_now;
         rot_ms = ms;
 
-        if ((frame_counter++) % 10 == 0)
-        {
-            dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
-        }
+        // if ((frame_counter++) % 10 == 0)
+        //{
+        dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
+        //}
 
-        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, 0, 0);
+        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, Min.X, Min.Y, Max.X, Max.Y);
+        // core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, WIDTH / 2, HEIGHT);
+
         fglEndFrame();
+
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
