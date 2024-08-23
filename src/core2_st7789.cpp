@@ -179,13 +179,28 @@ extern "C" void core2_st7789_draw_fb_scanline(uint16_t *colors, int y)
     st7789_spi_end();
 }
 
-void core2_st7789_draw_fb(uint16_t *colors, uint16_t StartX, uint16_t StartY, uint16_t EndX, uint16_t EndY)
+void core2_st7789_draw_fb(uint16_t *colors, fglBBox Bounds, fglBBox LastBounds)
 {
     const int lines_to_send = 6;
     st7789_spi_begin();
 
     WORD_ALIGNED_ATTR uint16_t draw_width = 0;
     WORD_ALIGNED_ATTR uint16_t draw_height = 0;
+
+    Bounds = fgl_BBox_FromTwo(Bounds, LastBounds);
+
+    uint16_t StartX = Bounds.Min.X;
+    uint16_t StartY = Bounds.Min.Y;
+    uint16_t EndX = Bounds.Max.X;
+    uint16_t EndY = Bounds.Max.Y;
+
+    uint16_t LStartX = LastBounds.Min.X;
+    uint16_t LStartY = LastBounds.Min.Y;
+    uint16_t LEndX = LastBounds.Max.X;
+    uint16_t LEndY = LastBounds.Max.Y;
+
+    uint16_t Ldraw_width = (LEndX - LStartX) + 1;
+    uint16_t Ldraw_height = (LEndY - LStartY) + 1;
 
     if (StartX == 0 && EndX == 0 && StartY == 0 && EndY == 0)
     {
@@ -219,8 +234,11 @@ void core2_st7789_draw_fb(uint16_t *colors, uint16_t StartX, uint16_t StartY, ui
         // sizeof(uint16_t));
     }*/
 
-    /*dprintf("StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", StartX, StartY, EndX, EndY,
-            draw_width, draw_height);*/
+    dprintf("LAS StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", LStartX, LStartY, LEndX, LEndY,
+            Ldraw_width, Ldraw_height);
+
+    dprintf("CUR StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", StartX, StartY, EndX, EndY,
+            draw_width, draw_height);
 
     for (size_t y = 0; y < draw_height; y++)
     {
@@ -321,7 +339,7 @@ void core2_st7789_test()
             }
         }
 
-        core2_st7789_draw_fb(fb1, 0, 0, 0, 0);
+        core2_st7789_draw_fb(fb1, fgl_BBox(0, 0, 0, 0), fgl_BBox(0, 0, 0, 0));
 
         // vTaskDelay(pdMS_TO_TICKS(1));
         ms = millis();

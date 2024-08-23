@@ -6,6 +6,26 @@
 #define fgl_fminf(a, b) ((a) < (b) ? (a) : (b))
 #define fgl_fmaxf(a, b) ((a) < (b) ? (b) : (a))
 
+fglBBox fgl_BBox(float XMin, float YMin, float XMax, float YMax) {
+    fglBBox BBox;
+    BBox.Min.X = XMin;
+    BBox.Min.Y = YMin;
+    BBox.Max.X = XMax;
+    BBox.Max.Y = YMax;
+    return BBox;
+}
+
+fglBBox fgl_BBox_FromTwo(fglBBox A, fglBBox B) {
+    fglBBox BBox;
+
+    BBox.Min.X = fgl_fminf(A.Min.X, B.Min.X);
+    BBox.Min.Y = fgl_fminf(A.Min.Y, B.Min.Y);
+    BBox.Max.X = fgl_fmaxf(A.Max.X, B.Max.X);
+    BBox.Max.Y = fgl_fmaxf(A.Max.Y, B.Max.Y);
+
+    return BBox;
+}
+
 fglVec2 fgl_Vec2(float X, float Y)
 {
     fglVec2 v;
@@ -27,6 +47,26 @@ fglVec2 fgl_Vec2_Min(fglVec2 A, fglVec2 B)
 fglVec2 fgl_Vec2_Max(fglVec2 A, fglVec2 B)
 {
     fglVec2 Max;
+
+    Max.X = fgl_fmaxf(A.X, B.X);
+    Max.Y = fgl_fmaxf(A.Y, B.Y);
+
+    return Max;
+}
+
+fglVec2i fgl_Vec2i_Min(fglVec2i A, fglVec2i B)
+{
+    fglVec2i Min;
+
+    Min.X = fgl_fminf(A.X, B.X);
+    Min.Y = fgl_fminf(A.Y, B.Y);
+
+    return Min;
+}
+
+fglVec2i fgl_Vec2i_Max(fglVec2i A, fglVec2i B)
+{
+    fglVec2i Max;
 
     Max.X = fgl_fmaxf(A.X, B.X);
     Max.Y = fgl_fmaxf(A.Y, B.Y);
@@ -140,4 +180,31 @@ void fglColorToRGB(FglColor clr, uint8_t *r, uint8_t *g, uint8_t *b)
     *r = clr.R << 3;
     *g = clr.G << 2;
     *b = clr.B << 3;
+}
+
+void fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max)
+{
+    Min->X = fgl_fminf(fgl_fminf(Tri->A.X, Tri->B.X), Tri->C.X);
+    Min->Y = fgl_fminf(fgl_fminf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
+
+    Max->X = fgl_fmaxf(fgl_fmaxf(Tri->A.X, Tri->B.X), Tri->C.X);
+    Max->Y = fgl_fmaxf(fgl_fmaxf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
+}
+
+void fglBoundingRect2(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 *Min, fglVec2 *Max)
+{
+    Min->X = fgl_fminf(fgl_fminf(A.X, B.X), C.X);
+    Min->Y = fgl_fminf(fgl_fminf(A.Y, B.Y), C.Y);
+
+    Max->X = fgl_fmaxf(fgl_fmaxf(A.X, B.X), C.X);
+    Max->Y = fgl_fmaxf(fgl_fmaxf(A.Y, B.Y), C.Y);
+}
+
+void fglBoundingRect3(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2i *Min, fglVec2i *Max)
+{
+    Min->X = fgl_fminf(fgl_fminf((int)A.X, (int)B.X), (int)C.X);
+    Min->Y = fgl_fminf(fgl_fminf((int)A.Y, (int)B.Y), (int)C.Y);
+    
+    Max->X = fgl_fmaxf(fgl_fmaxf((int)A.X, (int)B.X), (int)C.X);
+    Max->Y = fgl_fmaxf(fgl_fmaxf((int)A.Y, (int)B.Y), (int)C.Y);
 }

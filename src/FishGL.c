@@ -32,24 +32,6 @@ static void _fglBoundingBox(FglTriangle3 *Tri, fglVec3 *Min, fglVec3 *Max)
     Max->Z = fgl_fmaxf(fgl_fmaxf(Tri->A.Z, Tri->B.Z), Tri->C.Z);
 }
 
-static void _fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max)
-{
-    Min->X = fgl_fminf(fgl_fminf(Tri->A.X, Tri->B.X), Tri->C.X);
-    Min->Y = fgl_fminf(fgl_fminf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
-
-    Max->X = fgl_fmaxf(fgl_fmaxf(Tri->A.X, Tri->B.X), Tri->C.X);
-    Max->Y = fgl_fmaxf(fgl_fmaxf(Tri->A.Y, Tri->B.Y), Tri->C.Y);
-}
-
-static void _fglBoundingRect2(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 *Min, fglVec2 *Max)
-{
-    Min->X = fgl_fminf(fgl_fminf(A.X, B.X), C.X);
-    Min->Y = fgl_fminf(fgl_fminf(A.Y, B.Y), C.Y);
-
-    Max->X = fgl_fmaxf(fgl_fmaxf(A.X, B.X), C.X);
-    Max->Y = fgl_fmaxf(fgl_fmaxf(A.Y, B.Y), C.Y);
-}
-
 static bool _fglBarycentric(fglVec3 A, fglVec3 B, fglVec3 C, float X, float Y, fglVec3 *Val)
 {
     // fglVec3 A = Tri->A;
@@ -289,7 +271,7 @@ static fglMat3 _createVaryingMat(fglVec3 A, fglVec3 B, fglVec3 C)
 }
 
 static void _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 UVA, fglVec2 UVB,
-                               fglVec2 UVC, fglVec2 *BoundMin, fglVec2 *BoundMax)
+                               fglVec2 UVC, fglBBox* BBox)
 {
     if (RenderState.VertexShader == NULL || RenderState.FragmentShader == NULL)
         return;
@@ -297,8 +279,8 @@ static void _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 
     const fglMat3 Mat =
         _createVaryingMat(fgl_Vec3_from_Vec2(UVA, 0), fgl_Vec3_from_Vec2(UVB, 0), fgl_Vec3_from_Vec2(UVC, 0));
 
-    fglVec2 Min;
-    fglVec2 Max;
+    fglVec2i Min;
+    fglVec2i Max;
     fglVec3 UV;
     FglColor OutClr;
 
@@ -317,9 +299,9 @@ static void _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 
     if (VertShader(&RenderState, &C) == FGL_DISCARD)
         return;
 
-    _fglBoundingRect2(A, B, C, &Min, &Max);
-    *BoundMin = fgl_Vec2_Min(*BoundMin, Min);
-    *BoundMax = fgl_Vec2_Max(*BoundMax, Max);
+    fglBoundingRect3(A, B, C, &Min, &Max);
+    BBox->Min = fgl_Vec2i_Min(BBox->Min, Min);
+    BBox->Max = fgl_Vec2i_Max(BBox->Max, Max);
 
     FglFragmentFunc FragShader = (FglFragmentFunc)RenderState.FragmentShader;
     RenderState.CurShader = FglShaderType_Fragment;
@@ -370,7 +352,7 @@ static void _fglRenderTriangleDirect(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fg
     fglVec2 Min, Max;
     fglVec3 UV;
     FglColor OutClr;
-    _fglBoundingRect2(A, B, C, &Min, &Max);
+    fglBoundingRect2(A, B, C, &Min, &Max);
 
     FglFragmentFunc FragShader = (FglFragmentFunc)RenderState.FragmentShader;
     RenderState.CurShader = FglShaderType_Fragment;
@@ -410,9 +392,9 @@ static void _fglRenderTriangleDirect(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fg
 //*/
 
 //*
-void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len, fglVec2 *Min, fglVec2 *Max)
+void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len, fglBBox* BBox)
 {
     for (size_t i = 0; i < len; i += 3)
-        _fglRenderTriangle(Buffer, vecs[i + 0], vecs[i + 1], vecs[i + 2], uvs[i + 0], uvs[i + 1], uvs[i + 2], Min, Max);
+        _fglRenderTriangle(Buffer, vecs[i + 0], vecs[i + 1], vecs[i + 2], uvs[i + 0], uvs[i + 1], uvs[i + 2], BBox);
 }
 //*/

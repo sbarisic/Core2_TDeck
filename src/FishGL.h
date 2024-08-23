@@ -17,6 +17,16 @@ extern "C"
         float Y;
     } FGL_PACKED fglVec2;
 
+    typedef struct {
+        int16_t X;
+        int16_t Y;
+    } fglVec2i;
+
+    typedef struct {
+        fglVec2i Min;
+        fglVec2i Max;
+    } fglBBox;
+
     typedef struct
     {
         float X;
@@ -183,15 +193,20 @@ extern "C"
     FGL_API void fglDrawTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
     // FGL_API void fglFillTriangle3(FglBuffer *Buffer, FglColor Color, FglTriangle3 *Tri);
     FGL_API void fglRenderTriangle3(FglBuffer *Buffer, FglTriangle3 *Tri, FglTriangle2 *UV);
-    void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len, fglVec2 *Min, fglVec2 *Max);
+    void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len, fglBBox* BBox);
 
     // Math
     fglVec2 fgl_Vec2(float X, float Y);
     fglVec3 fgl_Vec3(float X, float Y, float Z);
     fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z);
 
+    fglBBox fgl_BBox(float XMin, float YMin, float XMax, float YMax);
+    fglBBox fgl_BBox_FromTwo(fglBBox A, fglBBox B);
+
     fglVec2 fgl_Vec2_Min(fglVec2 A, fglVec2 B);
     fglVec2 fgl_Vec2_Max(fglVec2 A, fglVec2 B);
+    fglVec2i fgl_Vec2i_Min(fglVec2i A, fglVec2i B);
+    fglVec2i fgl_Vec2i_Max(fglVec2i A, fglVec2i B);
 
     void fgl_Mul_4x4_4x1(fglMat4 *mat, const fglVec4 vec, fglVec4 *res);
     void fgl_Mul_3x3_3x1(fglMat3 *mat, const fglVec3 vec, fglVec3 *res);
@@ -207,6 +222,10 @@ extern "C"
     void fgl_Scale(fglMat4 *mat, fglVec3 tran);
 
     fglVec3 fgl_Cross3(fglVec3 a, fglVec3 b);
+
+    void fglBoundingRect(FglTriangle3 *Tri, fglVec2 *Min, fglVec2 *Max);
+    void fglBoundingRect2(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 *Min, fglVec2 *Max);
+    void fglBoundingRect3(fglVec3 A, fglVec3 B, fglVec3 C, fglVec2i *Min, fglVec2i *Max);
 
 #ifdef __cplusplus
 }

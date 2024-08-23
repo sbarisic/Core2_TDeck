@@ -38,7 +38,7 @@ bool VertexShader(FglState *State, fglVec3 *Vert)
     // mat4 res;
     // glm_mat4_copy(State->MatModel, res);
 
-    WORD_ALIGNED_ATTR fglVec4 v1 = {.X = Vert->X, .Y = Vert->Y, .Z = Vert->Z, .W = 1};
+    fglVec4 v1 = {.X = Vert->X, .Y = Vert->Y, .Z = Vert->Z, .W = 1};
     // glm_mat4_mulv(res, v1, v1);
 
     fgl_Mul_4x4_4x1(&State->MatModel, v1, &v1);
@@ -68,7 +68,7 @@ void fgl_init(int W, int H, int BPP)
 
     ColorBuffer = fglCreateBuffer(malloc(W * H * sizeof(FglColor)), W, H);
     fglClearBuffer(&ColorBuffer, fglColor(255, 0, 0));
-    core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, 0, 0);
+    core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, fgl_BBox(0, 0, 0, 0), fgl_BBox(0, 0, 0, 0));
 
     FglColor *Buff1 = (FglColor *)malloc(sizeof(FglColor) * W * H);
     for (size_t y = 0; y < H; y++)
@@ -143,13 +143,12 @@ void gpu_main(void *args)
     fglVec3 unitZ = fgl_Vec3(0, 0, 1);
     fglVec3 scaleVec = fgl_Vec3(1.5f, 1.5f, 1.0f);
 
-    fglVec2 Min;
-    fglVec2 Max;
+    fglBBox RenderBounds;
+    fglBBox LastRenderBounds = fgl_BBox(0, 0, 0, 0);
 
     for (;;)
     {
-        Min = fgl_Vec2(WIDTH, HEIGHT);
-        Max = fgl_Vec2(0, 0);
+        RenderBounds = fgl_BBox(WIDTH, HEIGHT, 0, 0);
 
         float rot_ang_1 = sinf(rot_ms / 1000.0f);
         float rot_ang_2 = cosf(rot_ms / 1000.0f) * 0.95f;
@@ -161,14 +160,14 @@ void gpu_main(void *args)
         fgl_Rotate(&fgl->MatModel, rot_ang_1, unitZ);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &Min, &Max);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &RenderBounds);
 
         fgl->MatModel = pos2;
         fgl_Rotate(&fgl->MatModel, rot_ang_2, unitZ);
         fgl_Scale(&fgl->MatModel, scaleVec);
         fgl_Transpose_4x4(&fgl->MatModel);
 
-        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &Min, &Max);
+        fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count, &RenderBounds);
 
         ms_now = millis();
         frame_time = ms_now - ms;
@@ -180,7 +179,8 @@ void gpu_main(void *args)
             dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
         }
 
-        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, Min.X, Min.Y, Max.X, Max.Y);
+        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, RenderBounds, LastRenderBounds);
+        LastRenderBounds = RenderBounds;
         // core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, WIDTH / 2, HEIGHT);
 
         fglEndFrame();
