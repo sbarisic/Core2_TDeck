@@ -143,17 +143,16 @@ void gpu_main(void *args)
     fglVec3 unitZ = fgl_Vec3(0, 0, 1);
     fglVec3 scaleVec = fgl_Vec3(1.5f, 1.5f, 1.0f);
 
-    rot_ms = 3000;
-    float rot_ang_1 = sinf(rot_ms / 1000.0f);
-    float rot_ang_2 = cosf(rot_ms / 1000.0f) * 0.95f;
-
     fglVec2 Min;
     fglVec2 Max;
 
     for (;;)
     {
-        Min = fgl_Vec2(WIDTH, 0);
+        Min = fgl_Vec2(WIDTH, HEIGHT);
         Max = fgl_Vec2(0, 0);
+
+        float rot_ang_1 = sinf(rot_ms / 1000.0f);
+        float rot_ang_2 = cosf(rot_ms / 1000.0f) * 0.95f;
 
         fglBeginFrame();
         fglClearBuffer(&ColorBuffer, fglColor(0, 0, 0));
@@ -176,17 +175,17 @@ void gpu_main(void *args)
         ms = ms_now;
         rot_ms = ms;
 
-        // if ((frame_counter++) % 10 == 0)
-        //{
-        dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
-        //}
+        if ((frame_counter++) % 10 == 0)
+        {
+            dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
+        }
 
         core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, Min.X, Min.Y, Max.X, Max.Y);
         // core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, WIDTH / 2, HEIGHT);
 
         fglEndFrame();
 
-        vTaskDelay(pdMS_TO_TICKS(200));
+        // vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 

@@ -219,12 +219,12 @@ void core2_st7789_draw_fb(uint16_t *colors, uint16_t StartX, uint16_t StartY, ui
         // sizeof(uint16_t));
     }*/
 
-    dprintf("StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", StartX, StartY, EndX, EndY,
-            draw_width, draw_height);
+    /*dprintf("StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", StartX, StartY, EndX, EndY,
+            draw_width, draw_height);*/
 
-    for (size_t y = StartY; y < draw_height; y++)
+    for (size_t y = 0; y < draw_height; y++)
     {
-        st7789_spi_write_byte((uint8_t *)(colors + (y * WIDTH + StartX)), draw_width * sizeof(uint16_t));
+        st7789_spi_write_byte((uint8_t *)(colors + ((y + StartY) * WIDTH + StartX)), draw_width * sizeof(uint16_t));
     }
 
     // st7789_write_cmd_u8(ST7789_NOP);
