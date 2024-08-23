@@ -172,6 +172,20 @@ void fglClearBuffer(FglBuffer *Buffer, FglColor Clr)
         Buffer->Pixels[i] = Clr;
 }
 
+void fglClearBufferRect(FglBuffer *Buffer, FglColor Clr, fglBBox Rect)
+{
+    size_t W = Buffer->Width;
+    size_t H = Buffer->Height;
+
+    for (size_t y = 0; y < H; y++)
+    {
+        for (size_t x = 0; x < W; x++)
+        {
+            Buffer->Pixels[y * W + x] = Clr;
+        }
+    }
+}
+
 void fglDisplayToFramebuffer(FglBuffer *Buffer)
 {
     if (RenderState.BPP == 32 && RenderState.Stride == 0 && RenderState.Order == PixelOrder_RGBA)
@@ -270,11 +284,11 @@ static fglMat3 _createVaryingMat(fglVec3 A, fglVec3 B, fglVec3 C)
     return Mat;
 }
 
-static void _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 UVA, fglVec2 UVB,
+static int _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 UVA, fglVec2 UVB,
                                fglVec2 UVC, fglBBox* BBox)
 {
     if (RenderState.VertexShader == NULL || RenderState.FragmentShader == NULL)
-        return;
+        return 0;
 
     const fglMat3 Mat =
         _createVaryingMat(fgl_Vec3_from_Vec2(UVA, 0), fgl_Vec3_from_Vec2(UVB, 0), fgl_Vec3_from_Vec2(UVC, 0));
@@ -289,17 +303,28 @@ static void _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 
 
     RenderState.VertNum = 0;
     if (VertShader(&RenderState, &A) == FGL_DISCARD)
-        return;
+        return 0;
 
     RenderState.VertNum = 1;
     if (VertShader(&RenderState, &B) == FGL_DISCARD)
-        return;
+        return 0;
 
     RenderState.VertNum = 2;
     if (VertShader(&RenderState, &C) == FGL_DISCARD)
-        return;
+        return 0;
 
     fglBoundingRect3(A, B, C, &Min, &Max);
+
+
+    // Clamp to framebuffer size
+    Min = fgl_Vec2i_Max(Min, fgl_Vec2i(0, 0));
+    Max = fgl_Vec2i_Min(Max, fgl_Vec2i(Buffer->Width, Buffer->Height));
+
+    if (Max.X < Min.X || Max.Y < Min.Y)
+        return 0;
+
+    printf("Bounds(SX: %d, SY: %d, EX: %d, EY: %d)\n", Min.X, Min.Y, Max.X, Max.Y);
+
     BBox->Min = fgl_Vec2i_Min(BBox->Min, Min);
     BBox->Max = fgl_Vec2i_Max(BBox->Max, Max);
 
@@ -324,6 +349,8 @@ static void _fglRenderTriangle(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 
             }
         }
     }
+
+    return 1;
 }
 
 static void _fglRenderTriangleDirect(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fglVec3 C, fglVec2 UVA, fglVec2 UVB,
@@ -394,7 +421,12 @@ static void _fglRenderTriangleDirect(FglBuffer *Buffer, fglVec3 A, fglVec3 B, fg
 //*
 void fglRenderTriangle3v(FglBuffer *Buffer, fglVec3 *vecs, fglVec2 *uvs, const size_t len, fglBBox* BBox)
 {
-    for (size_t i = 0; i < len; i += 3)
-        _fglRenderTriangle(Buffer, vecs[i + 0], vecs[i + 1], vecs[i + 2], uvs[i + 0], uvs[i + 1], uvs[i + 2], BBox);
+    for (size_t i = 0; i < len; i += 3){
+        int tri_num = i / 3;
+
+        if (  _fglRenderTriangle(Buffer, vecs[i + 0], vecs[i + 1], vecs[i + 2], uvs[i + 0], uvs[i + 1], uvs[i + 2], BBox) != 0) {
+            printf("Tri %d\n", tri_num);
+        }
+    }
 }
 //*/

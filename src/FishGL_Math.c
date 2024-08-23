@@ -54,6 +54,14 @@ fglVec2 fgl_Vec2_Max(fglVec2 A, fglVec2 B)
     return Max;
 }
 
+fglVec2i fgl_Vec2i(int16_t X, int16_t Y)
+{
+    fglVec2i v;
+    v.X = X;
+    v.Y = Y;
+    return v;
+}
+
 fglVec2i fgl_Vec2i_Min(fglVec2i A, fglVec2i B)
 {
     fglVec2i Min;
@@ -81,6 +89,13 @@ fglVec3 fgl_Vec3(float X, float Y, float Z)
     v.Y = Y;
     v.Z = Z;
     return v;
+}
+
+fglVec3 fgl_Vec3_Scale(fglVec3 Vec, float Scale) {
+    Vec.X = Vec.X * Scale;
+    Vec.Y = Vec.Y * Scale;
+    Vec.Z = Vec.Z * Scale;
+    return Vec;
 }
 
 fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z)

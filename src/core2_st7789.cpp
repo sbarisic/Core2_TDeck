@@ -194,13 +194,13 @@ void core2_st7789_draw_fb(uint16_t *colors, fglBBox Bounds, fglBBox LastBounds)
     uint16_t EndX = Bounds.Max.X;
     uint16_t EndY = Bounds.Max.Y;
 
-    uint16_t LStartX = LastBounds.Min.X;
+    /*uint16_t LStartX = LastBounds.Min.X;
     uint16_t LStartY = LastBounds.Min.Y;
     uint16_t LEndX = LastBounds.Max.X;
     uint16_t LEndY = LastBounds.Max.Y;
 
     uint16_t Ldraw_width = (LEndX - LStartX) + 1;
-    uint16_t Ldraw_height = (LEndY - LStartY) + 1;
+    uint16_t Ldraw_height = (LEndY - LStartY) + 1;*/
 
     if (StartX == 0 && EndX == 0 && StartY == 0 && EndY == 0)
     {
@@ -234,11 +234,11 @@ void core2_st7789_draw_fb(uint16_t *colors, fglBBox Bounds, fglBBox LastBounds)
         // sizeof(uint16_t));
     }*/
 
-    dprintf("LAS StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", LStartX, LStartY, LEndX, LEndY,
+    /*dprintf("LAS StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", LStartX, LStartY, LEndX, LEndY,
             Ldraw_width, Ldraw_height);
 
     dprintf("CUR StartX: %d, StartY: %d, EndX: %d, EndY: %d, DrawWidth: %d, DrawHeight: %d\n", StartX, StartY, EndX, EndY,
-            draw_width, draw_height);
+            draw_width, draw_height);*/
 
     for (size_t y = 0; y < draw_height; y++)
     {

@@ -186,6 +186,7 @@ extern "C"
     FGL_API FglBuffer fglCreateBufferFromPng(void *PngInMemory, int32_t Len);
     FGL_API void fglDisplayToFramebuffer(FglBuffer *Buffer);
     FGL_API void fglClearBuffer(FglBuffer *Buffer, FglColor Clr);
+    FGL_API void fglClearBufferRect(FglBuffer *Buffer, FglColor Clr, fglBBox Rect);
     FGL_API void fglBindTexture(FglBuffer *TextureBuffer, int32_t Slot);
 
     // Drawing
@@ -199,6 +200,9 @@ extern "C"
     fglVec2 fgl_Vec2(float X, float Y);
     fglVec3 fgl_Vec3(float X, float Y, float Z);
     fglVec3 fgl_Vec3_from_Vec2(fglVec2 V2, float Z);
+    fglVec2i fgl_Vec2i(int16_t X, int16_t Y);
+
+    fglVec3 fgl_Vec3_Scale(fglVec3 Vec, float Scale);
 
     fglBBox fgl_BBox(float XMin, float YMin, float XMax, float YMax);
     fglBBox fgl_BBox_FromTwo(fglBBox A, fglBBox B);
