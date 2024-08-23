@@ -1,7 +1,7 @@
 #include <core2.h>
 
-#include <math.h>
 #include <images.h>
+#include <math.h>
 
 // #include <lvgl.h>
 // #include <Arduino_GFX_Library.h>
@@ -18,11 +18,12 @@
 #define WIDTH 320
 #define HEIGHT 240
 
-int Width;
-int Height;
+static int Width;
+static int Height;
 
-FglBuffer ColorBuffer = {0};
-FglBuffer TestTex = {0};
+static FglBuffer DrawMask = {0};
+static FglBuffer ColorBuffer = {0};
+static FglBuffer TestTex = {0};
 
 // #define TRI_COUNT 2
 // FglTriangle3 Tri[TRI_COUNT];
@@ -63,9 +64,11 @@ void fgl_init(int W, int H, int BPP)
 
     fglInit(NULL, W, H, BPP, 0, PixelOrder_RGB_565);
 
+    DrawMask = fglCreateBuffer(malloc(W * H * sizeof(FglColor)), W, H);
+
     ColorBuffer = fglCreateBuffer(malloc(W * H * sizeof(FglColor)), W, H);
     fglClearBuffer(&ColorBuffer, fglColor(255, 0, 0));
-    core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels);
+    core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, 0, 0);
 
     FglColor *Buff1 = (FglColor *)malloc(sizeof(FglColor) * W * H);
     for (size_t y = 0; y < H; y++)
@@ -118,8 +121,13 @@ void fgl_init(int W, int H, int BPP)
     UV[1] = (FglTriangle2){{1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}};*/
 }
 
-void draw_thread(void *args)
+void gpu_main(void *args)
 {
+    core2_st7789_init();
+
+    dprintf("core2_gpu_main BEGIN\n");
+    fgl_init(WIDTH, HEIGHT, 16);
+
     FglState *fgl = fglGetState();
 
     ulong ms = millis();
@@ -135,18 +143,23 @@ void draw_thread(void *args)
     fglVec3 unitZ = fgl_Vec3(0, 0, 1);
     fglVec3 scaleVec = fgl_Vec3(1.5f, 1.5f, 1.0f);
 
+    rot_ms = 3000;
+    float rot_ang_1 = sinf(rot_ms / 1000.0f);
+    float rot_ang_2 = cosf(rot_ms / 1000.0f) * 0.95f;
+
     for (;;)
     {
+        fglBeginFrame();
         fglClearBuffer(&ColorBuffer, fglColor(0, 0, 0));
 
         fgl->MatModel = pos1;
-        fgl_Rotate(&fgl->MatModel, sinf(rot_ms / 1000.0f), unitZ);
+        fgl_Rotate(&fgl->MatModel, rot_ang_1, unitZ);
         fgl_Transpose_4x4(&fgl->MatModel);
 
         fglRenderTriangle3v(&ColorBuffer, verts, uvs, vert_count);
 
         fgl->MatModel = pos2;
-        fgl_Rotate(&fgl->MatModel, cosf(rot_ms / 1000.0f) * 0.95f, unitZ);
+        fgl_Rotate(&fgl->MatModel, rot_ang_2, unitZ);
         fgl_Scale(&fgl->MatModel, scaleVec);
         fgl_Transpose_4x4(&fgl->MatModel);
 
@@ -162,8 +175,20 @@ void draw_thread(void *args)
             dprintf("Frame time: %lu ms - %.2f FPS\n", frame_time, (1.0f / (frame_time / 1000.0f)));
         }
 
-        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels);
-        vTaskDelay(pdMS_TO_TICKS(2));
+        core2_st7789_draw_fb((uint16_t *)ColorBuffer.Pixels, 0, 0, 0, 0);
+        fglEndFrame();
+    }
+}
+
+void update_main(void *args)
+{
+    int64_t last_time = 0;
+    float target_fps = 60;
+    float target_frametime = 1.0f / target_fps;
+
+    for (;;)
+    {
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -173,17 +198,14 @@ void core2_main()
     digitalWrite(BOARD_POWERON, HIGH);
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    core2_st7789_init();
-
-    dprintf("core2_gpu_main BEGIN\n");
-    fgl_init(WIDTH, HEIGHT, 16);
+    /*char *char_buf = (char *)core2_malloc(4096);
+    vTaskList(char_buf);
+    dprintf("%s\n", char_buf);*/
 
     int PRIOR = 10;
-    int CORE = 1;
-    xTaskCreatePinnedToCore(draw_thread, "gpu_main", 1024 * 32, NULL, PRIOR, NULL, CORE);
 
-    for (;;)
-    {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    xTaskCreatePinnedToCore(gpu_main, "gpu_main", 1024 * 32, NULL, PRIOR, NULL, 1);
+    xTaskCreatePinnedToCore(update_main, "update_main", 1024 * 32, NULL, PRIOR, NULL, 0);
+
+    vTaskDelete(NULL);
 }

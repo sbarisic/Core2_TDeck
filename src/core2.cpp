@@ -1,9 +1,9 @@
 #include <core2.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <esp_chip_info.h>
 #include <esp_flash.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <nvs_flash.h>
 #include <rtc.h>
 
@@ -71,7 +71,8 @@ void core2_print_status()
         return;
     }
 
-    dprintf("%lu MB %s flash\n", flash_size / (1024 * 1024), (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+    dprintf("%lu MB %s flash\n", flash_size / (1024 * 1024),
+            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     uint32_t free_heap = esp_get_minimum_free_heap_size();
     dprintf("Minimum free heap size: %ld bytes (%ld kb)\n", free_heap, free_heap / 1024);
@@ -152,9 +153,9 @@ void core2_queue_reset(xQueueHandle q)
 // @brief Expects 30 byte buffer
 void core2_err_tostr(esp_err_t err, char *buffer)
 {
-#define MAKE_CASE(err)        \
-    case err:                 \
-        strcpy(buffer, #err); \
+#define MAKE_CASE(err)                                                                                                 \
+    case err:                                                                                                          \
+        strcpy(buffer, #err);                                                                                          \
         break
 
     switch (err)
@@ -191,16 +192,16 @@ void core2_err_tostr(esp_err_t err, char *buffer)
 void core2_resetreason_tostr(esp_reset_reason_t err, char *buffer, bool desc)
 {
 #undef MAKE_CASE
-#define MAKE_CASE(err, descr)      \
-    case err:                      \
-        if (desc)                  \
-        {                          \
-            strcpy(buffer, descr); \
-        }                          \
-        else                       \
-        {                          \
-            strcpy(buffer, #err);  \
-        }                          \
+#define MAKE_CASE(err, descr)                                                                                          \
+    case err:                                                                                                          \
+        if (desc)                                                                                                      \
+        {                                                                                                              \
+            strcpy(buffer, descr);                                                                                     \
+        }                                                                                                              \
+        else                                                                                                           \
+        {                                                                                                              \
+            strcpy(buffer, #err);                                                                                      \
+        }                                                                                                              \
         break
 
     switch (err)
@@ -288,12 +289,6 @@ bool core2_string_ends_with(const char *str, const char *end)
     return strncmp(str + lenstr - lensuffix, end, lensuffix) == 0;
 }
 
-void core2_main_impl(void *args)
-{
-    core2_main();
-    vTaskDelete(NULL);
-}
-
 void core2_wait_for_serial()
 {
     fflush(stdout);
@@ -313,12 +308,12 @@ void loop()
 
 void setup()
 {
-    // vTaskDelay(pdMS_TO_TICKS(10000));
-    //core2_wait_for_serial();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    core2_wait_for_serial();
 
     core2_init();
     core2_print_status();
 
-    xTaskCreate(core2_main_impl, "core2_main", 1024 * 16, NULL, 1, NULL);
+    core2_main();
     vTaskDelete(NULL);
 }
