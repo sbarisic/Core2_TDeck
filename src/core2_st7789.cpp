@@ -332,6 +332,9 @@ void core2_st7789_init()
 
 void core2_st7789_test()
 {
+	// allocate FB using DMA cap
+	// https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/mem_alloc.html
+	
     uint16_t *fb1 = (uint16_t *)malloc(sizeof(uint16_t) * WIDTH * HEIGHT);
 
     int ctr = 0;
